@@ -235,6 +235,11 @@ proc discord::gateway::EventHandler { sock msg } {
             ::discord::gateway::Every $interval \
                     [list ::discord::gateway::SendHeartbeat $sock]
         }
+        RESUME {    ;# Not much to do here
+            if {[dict exists $d _trace]} {
+                SetConnectionInfo $sock _trace [dict get $d _trace]
+            }
+        }
         default {
             ${::discord::gateway::log}::warn \
                     "EventHandler: Event not implemented: $t"
