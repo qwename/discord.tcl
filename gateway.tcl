@@ -429,8 +429,8 @@ proc discord::gateway::SendIdentify { sock args } {
     set token               [::json::write::string \
                                     [GetConnectionInfo $sock token]]
     set os                  [::json::write::string linux]
-    set browser             [::json::write::string "Tcl 8.5, websocket 1.4"]
-    set device              [::json::write::string "Tcl 8.5, websocket 1.4"]
+    set browser             [::json::write::string "discord.tcl 0.1"]
+    set device              [::json::write::string "discord.tcl 0.1"]
     set referrer            [::json::write::string ""]
     set referring_domain    [::json::write::string ""]
     set compress            [GetConnectionInfo $sock compress]
