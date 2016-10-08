@@ -74,7 +74,7 @@ namespace eval discord::gateway {
 #       Returns the connection's WebSocket object.
 
 proc discord::gateway::connect { token } {
-    set gateway [::discord::GetGateway]
+    set gateway [discord::GetGateway]
     ${::discord::gateway::log}::notice "Connecting to the Gateway: '$gateway'"
 
     set sock [::websocket::open $gateway ::discord::gateway::Handler]
@@ -223,9 +223,11 @@ proc discord::gateway::EventHandler { sock msg } {
             "EventHandler: sock: '$sock' t: '$t' s: $s"
     switch -glob -- $t {
         READY {
-            foreach attr {v session_id heartbeat_interval} {
-                if {[dict exists $d $attr]} {
-                    SetConnectionInfo $sock $attr [dict get $d $attr]
+            foreach field [dict keys $d] {
+                switch $field {
+                    default {
+                        SetConnectionInfo $sock $field [dict get $d $field]
+                    }
                 }
             }
 
@@ -271,22 +273,25 @@ proc discord::gateway::OpHandler { sock msg } {
 
     switch -glob -- $opToken {
         DISPATCH {
-            EventHandler $sock $msg
+            after idle [list discord::gateway::EventHandler $sock $msg]
         }
         RECONNECT {
-            SendResume $sock
+            after idle [list discord::gateway::SendResume $sock]
         }
         INVALID_SESSION {
-            SendIdentify $sock
+            after idle [list discord::gateway::SendIdentify $sock]
         }
         HELLO {
-            SetConnectionInfo $sock heartbeat_interval [dict get $msg heartbeat_interval]
+            SetConnectionInfo $sock heartbeat_interval \
+                    [dict get $msg heartbeat_interval]
         }
         HEARTBEAT_ACK {
-            ${::discord::gateway::log}::debug "OpHandler: Heartbeat ACK received"
+            ${::discord::gateway::log}::debug \
+                    "OpHandler: Heartbeat ACK received"
         }
         default {
-            ${::discord::gateway::log}::warn "op not implemented: ($opToken)"
+            ${::discord::gateway::log}::warn \
+                    "OpHandler: op not implemented: ($opToken)"
             return 0
         }
     }
@@ -310,10 +315,10 @@ proc discord::gateway::TextHandler { sock msg } {
     }
     if {[catch {::rest::format_json $msg} res]} {
         ${::discord::gateway::log}::error "TextHandler: $res"
-        return
+        return 0
     }
     if {[dict exists $res op]} {
-        OpHandler $sock $res
+        after idle [list ::discord::gateway::OpHandler $sock $res]
         return 1
     } else {
         ${::discord::gateway::log}::warn "TextHandler: no op: $msg"
@@ -336,18 +341,18 @@ proc discord::gateway::Handler { sock type msg } {
     ${::discord::gateway::log}::debug "Handler: type: $type"
     switch -glob -- $type {
         text {
-            TextHandler $sock $msg
+            after idle [list ::discord::gateway::TextHandler $sock $msg]
         }
         binary {
             if {![catch {::inflate $msg} res]} {
-                TextHandler $sock $res
+                after idle [list ::discord::gateway::TextHandler $sock $res]
             } else {
                 ${::discord::gateway::log}::warn \
                         "Handler: [string length $res] bytes of binary data."
             }
         }
         connect {
-            SendIdentify $sock
+            after idle [list ::discord::gateway::SendIdentify $sock]
         }
         close -
         disconnect {
@@ -383,7 +388,7 @@ proc discord::gateway::Handler { sock type msg } {
 proc discord::gateway::Send { sock opToken data } {
     if ![dict exists $::discord::gateway::Op $opToken] {
         ${::discord::gateway::log}::error "Invalid op name: '$opToken'"
-        return
+        return 0
     }
     set op [dict get $::discord::gateway::Op $opToken]
 
@@ -438,8 +443,8 @@ proc discord::gateway::SendIdentify { sock args } {
         set opt [string range $option 1 end]
         if {$opt ni {os browser device referrer referring_domain compress
                       large_threshold shard}} {
-            ${::discord::gateway::log}::error "Invalid options: '$opt'"
-            return
+            ${::discord::gateway::log}::error "Invalid option: '$opt'"
+            continue
         }
         switch -glob -- $opt {
             compress {
