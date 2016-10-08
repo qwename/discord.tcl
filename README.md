@@ -15,3 +15,11 @@ ${discord::log}::setlevel info
 set token "your token here"
 discord::gateway connect $token
 ```
+
+### Links
+
+- [Coding style guide](http://www.tcl.tk/doc/styleGuide.pdf)
+
+### TODO
+
+- Implement more Dispatch events
