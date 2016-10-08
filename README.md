@@ -1,6 +1,12 @@
 # discord.tcl 0.1
 Discord API library writtten in Tcl. Tested on Tcl 8.5.
 
+### Status
+
+- Can only connect to the Gateway
+- Only handles the "READY" Dispatch event
+- Does not disconnect properly
+
 ### Required Libraries
 
 - [Tcllib 1.18](http://www.tcl.tk/software/tcllib) (*websocket*, *rest*, *json::write*, *logger*)
