@@ -4,8 +4,7 @@ Discord API library writtten in Tcl. Tested on Tcl 8.5.
 ### Status
 
 - Can only connect to the Gateway
-- Only handles the "READY" Dispatch event
-- Does not disconnect properly
+- Dispatch events supported: Restart, Resume
 
 ### Libraries
 

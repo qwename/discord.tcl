@@ -100,30 +100,13 @@ proc discord::gateway::connect { token } {
 proc discord::gateway::disconnect { sock } {
     ${::discord::gateway::log}::notice "Disconnecting from the Gateway."
 
-# From RFC 6455 (The WebSocket Protocol):
-# Section 5.5.1 (Close):
-# The application MUST NOT send any more data frames after sending a
-# Close frame.
-# Section 7.2.1 (Client-Initiated Closure):
-# Except as indicated above or as specified by the application layer
-# (e.g., a script using the WebSocket API), clients SHOULD NOT close
-# the connection.
-# https://tools.ietf.org/html/rfc6455#section-7.2.1
-#
-# Discord Gateway does not provide a way to inform it that you want to close
-# the connection. Ideally, there would be a Gateway opcode (e.g. CLOSE) to tell
-# the Gateway to initiate the closure.
-#
-# The code "websocket::close $sock" is probably meant for a server to use. As of
-# version 1.4, the code doesn't send a Close frame anyway. The ticket for this
-# was opened in 2015: https://core.tcl.tk/tcllib/info/13d8e3ca0689b7cc.
-# The command will still close the TCP connection, but your bot will still
-# appear as being online.
-# 
-# After some testing, sending the Close frame twice will make the bot offline,
-# but of course this violates the RFC.
+# Manually construct the Close frame body, as the websocket library's close
+# procedure does not actually send anything as of version 1.4.
 
-    websocket::close $sock
+	set msg [binary format Su 1000]
+	set msg [string range $msg 0 124];
+	websocket::send $sock 8 $msg
+    ;# websocket::close $sock
     return
 }
 
