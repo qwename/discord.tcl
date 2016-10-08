@@ -1,4 +1,4 @@
-# discord.tcl
+# discord.tcl 0.1
 Discord API library writtten in Tcl. Tested on Tcl 8.5.
 
 ### Required Libraries
