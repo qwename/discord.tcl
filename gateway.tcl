@@ -223,14 +223,21 @@ proc discord::gateway::EventHandler { sock msg } {
             "EventHandler: sock: '$sock' t: '$t' s: $s"
     switch -glob -- $t {
         READY {
-            set session_id [dict get $d session_id]
-            SetConnectionInfo $sock session_id $session_id
-            ${::discord::gateway::log}::debug "EventHandler: READY: session_id: '$session_id'"
-            puts fine
-            ::discord::gateway::Every [GetConnectionInfo $sock heartbeat_interval] [list ::discord::gateway::SendHeartbeat $sock]
+            foreach attr {v session_id heartbeat_interval} {
+                if {[dict exists $d $attr]} {
+                    SetConnectionInfo $sock $attr [dict get $d $attr]
+                }
+            }
+
+            set interval [GetConnectionInfo $sock heartbeat_interval]
+            ${::discord::gateway::log}::debug \
+                    "EventHandler: Sending heartbeat every $interval ms"
+            ::discord::gateway::Every $interval \
+                    [list ::discord::gateway::SendHeartbeat $sock]
         }
         default {
-            ${::discord::gateway::log}::warn "Event not implemented: $t"
+            ${::discord::gateway::log}::warn \
+                    "EventHandler: Event not implemented: $t"
             return 0
         }
     }
@@ -409,7 +416,8 @@ proc discord::gateway::SendHeartbeat { sock } {
 #       Returns 1 if the message is sent successfully, and 0 otherwise.
 
 proc discord::gateway::SendIdentify { sock args } {
-    set token               [::json::write::string [GetConnectionInfo $sock token]]
+    set token               [::json::write::string \
+                                    [GetConnectionInfo $sock token]]
     set os                  [::json::write::string linux]
     set browser             [::json::write::string "Tcl 8.5, websocket 1.4"]
     set device              [::json::write::string "Tcl 8.5, websocket 1.4"]
@@ -431,14 +439,16 @@ proc discord::gateway::SendIdentify { sock args } {
         switch -glob -- $opt {
             compress {
                 if {$value ni {true false}} {
-                    ${::discord::gateway::log}::error "SendIdentify: compress: Invalid value: '$value'"
+                    ${::discord::gateway::log}::error \
+                            "SendIdentify: compress: Invalid value: '$value'"
                     continue
                 }
             }
             large_threshold {
                 if {![string is integer -strict $value] \
                             || $value < 50 || $value > 250} {
-                    ${::discord::gateway::log}::error "SendIdentify: large_threshold: Invalid value: '$value'"
+                    ${::discord::gateway::log}::error \
+                        "SendIdentify: large_threshold: Invalid value: '$value'"
                 }
             }
         }
