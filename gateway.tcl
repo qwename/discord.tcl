@@ -19,8 +19,14 @@ package require logger
 ::http::register https 443 ::tls::socket
 
 namespace eval discord::gateway {
-    namespace export connect disconnect
+    namespace export connect disconnect logWsMsg
     namespace ensemble create
+
+    set LogWsMsg 0
+    set MsgLogLevel debug
+
+# Compression only used for Dispatch "READY" event. Set CompressEnabled to 1 if
+# you are able to get mkZiplib onto your system.
 
     set CompressEnabled 0
     if $CompressEnabled {
@@ -95,6 +101,32 @@ proc discord::gateway::disconnect { sock } {
     ${::discord::gateway::log}::notice "Disconnecting from the Gateway."
     ::websocket::close $sock 1000
     return
+}
+
+# discord::gateway::logWsMsg --
+#
+#       Toggle logging of WebSocket text messages.
+#
+# Arguments:
+#       on      Disable printing when set to 0, enabled otherwise.
+#       level   (optional) Logging level to print messages to. Levels are
+#               debug, info, notice, warn, error, critical, alert, emergency.
+#               Defaults to debug.
+#
+# Results:
+#       Returns 1 if changes were made, 0 otherwise.
+
+proc discord::gateway::logWsMsg { on {level "debug"} } {
+    if {$level ni {debug info notice warn error critical alert emergency}} {
+        return 0
+    }
+    if {$on == 0} {
+        set ::discord::gateway::LogWsMsg 0
+    } else {
+        set ::discord::gateway::LogWsMsg 1
+    }
+    set ::discord::gateway::MsgLogLevel $level
+    return 1
 }
 
 # discord::gateway::Every --
@@ -261,6 +293,9 @@ proc discord::gateway::OpHandler { sock msg } {
 #       Returns 1 if the message is handled successfully, and 0 otherwise.
 
 proc discord::gateway::TextHandler { sock msg } {
+    if {$::discord::gateway::LogWsMsg} {
+        ${::discord::gateway::log}::${::discord::gateway::MsgLogLevel} $msg
+    }
     if {[catch {::rest::format_json $msg} res]} {
         ${::discord::gateway::log}::error "TextHandler: $res"
         return
@@ -307,7 +342,7 @@ proc discord::gateway::Handler { sock type msg } {
             ::discord::gateway::Every cancel [list ::discord::gateway::SendHeartbeat $sock]
             dict unset ::discord::gateway::Sockets $sock
         }
-        ping {
+        ping {      ;# Not sure if Discord uses this.
             ${::discord::gateway::log}::notice "Handler: ping: $msg"
         }
         default {
