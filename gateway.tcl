@@ -99,7 +99,31 @@ proc discord::gateway::connect { token } {
 
 proc discord::gateway::disconnect { sock } {
     ${::discord::gateway::log}::notice "Disconnecting from the Gateway."
-    ::websocket::close $sock 1000
+
+# From RFC 6455 (The WebSocket Protocol):
+# Section 5.5.1 (Close):
+# The application MUST NOT send any more data frames after sending a
+# Close frame.
+# Section 7.2.1 (Client-Initiated Closure):
+# Except as indicated above or as specified by the application layer
+# (e.g., a script using the WebSocket API), clients SHOULD NOT close
+# the connection.
+# https://tools.ietf.org/html/rfc6455#section-7.2.1
+#
+# Discord Gateway does not provide a way to inform it that you want to close
+# the connection. Ideally, there would be a Gateway opcode (e.g. CLOSE) to tell
+# the Gateway to initiate the closure.
+#
+# The code "websocket::close $sock" is probably meant for a server to use. As of
+# version 1.4, the code doesn't send a Close frame anyway. The ticket for this
+# was opened in 2015: https://core.tcl.tk/tcllib/info/13d8e3ca0689b7cc.
+# The command will still close the TCP connection, but your bot will still
+# appear as being online.
+# 
+# After some testing, sending the Close frame twice will make the bot offline,
+# but of course this violates the RFC.
+
+    websocket::close $sock
     return
 }
 
@@ -218,9 +242,9 @@ proc discord::gateway::EventHandler { sock msg } {
     set t [dict get $msg t]
     set s [dict get $msg s]
     set d [dict get $msg d]
-    SetConnectionInfo $sock s $s
+    SetConnectionInfo $sock seq $s
     ${::discord::gateway::log}::debug \
-            "EventHandler: sock: '$sock' t: '$t' s: $s"
+            "EventHandler: sock: '$sock' t: '$t' seq: $s"
     switch -glob -- $t {
         READY {
             foreach field [dict keys $d] {
@@ -354,10 +378,13 @@ proc discord::gateway::Handler { sock type msg } {
         connect {
             after idle [list ::discord::gateway::SendIdentify $sock]
         }
-        close -
-        disconnect {
+        close {
             ::discord::gateway::Every cancel [list ::discord::gateway::SendHeartbeat $sock]
+            ${::discord::gateway::log}::notice "Handler: Connection closed."
+        }
+        disconnect {
             dict unset ::discord::gateway::Sockets $sock
+            ${::discord::gateway::log}::notice "Handler: Disconnect."
         }
         ping {      ;# Not sure if Discord uses this.
             ${::discord::gateway::log}::notice "Handler: ping: $msg"
@@ -392,7 +419,7 @@ proc discord::gateway::Send { sock opToken data } {
     }
     set op [dict get $::discord::gateway::Op $opToken]
 
-    set payload [::json::write::object op $op d $data]
+    set payload [json::write::object op $op d $data]
     if [catch {::websocket::send $sock text $payload} res] {
         ${::discord::gateway::log}::error "::websocket::send: $res"
         return 0
@@ -412,7 +439,7 @@ proc discord::gateway::Send { sock opToken data } {
 #       Returns 1 if the message is sent successfully, and 0 otherwise.
 
 proc discord::gateway::SendHeartbeat { sock } {
-    return [Send $sock HEARTBEAT [GetConnectionInfo $sock s]]
+    return [Send $sock HEARTBEAT [GetConnectionInfo $sock seq]]
 }
 
 # discord::gateway::SendIdentify --
@@ -426,16 +453,16 @@ proc discord::gateway::SendHeartbeat { sock } {
 #       Returns 1 if the message is sent successfully, and 0 otherwise.
 
 proc discord::gateway::SendIdentify { sock args } {
-    set token               [::json::write::string \
+    set token               [json::write::string \
                                     [GetConnectionInfo $sock token]]
-    set os                  [::json::write::string linux]
-    set browser             [::json::write::string "discord.tcl 0.1"]
-    set device              [::json::write::string "discord.tcl 0.1"]
-    set referrer            [::json::write::string ""]
-    set referring_domain    [::json::write::string ""]
+    set os                  [json::write::string linux]
+    set browser             [json::write::string "discord.tcl 0.1"]
+    set device              [json::write::string "discord.tcl 0.1"]
+    set referrer            [json::write::string ""]
+    set referring_domain    [json::write::string ""]
     set compress            [GetConnectionInfo $sock compress]
     set large_threshold     50
-    set shard               [::json::write::array 0 1]
+    set shard               [json::write::array 0 1]
     foreach { option value } $args {
         if {[string index $option 0] ne -} {
             continue
@@ -464,9 +491,9 @@ proc discord::gateway::SendIdentify { sock args } {
         }
         set $opt $value
     }
-    set d [::json::write::object \
+    set d [json::write::object \
               token $token \
-              properties [::json::write::object \
+              properties [json::write::object \
                   {$os} $os \
                   {$browser} $browser \
                   {$device} $device \
@@ -489,5 +516,9 @@ proc discord::gateway::SendIdentify { sock args } {
 #       Returns 1 if the message is sent successfully, and 0 otherwise.
 
 proc discord::gateway::SendResume { sock } {
-    return [Send $sock RESUME [GetConnectionInfo $sock session_id]]
+    set d [json::write::object \
+            token [GetConnectionInfo $sock token] \
+            session_id [GetConnectionInfo $sock session_id] \
+            seq [GetConnectionInfo $sock seq]]
+    return [Send $sock RESUME $d]
 }
