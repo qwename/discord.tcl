@@ -1,3 +1,12 @@
+# discord.tcl --
+#
+#       This file implements the Tcl code for interacting with the Discord API
+#
+# Copyright (c) 2016, Yixin Zhang
+#
+# See the file "LICENSE" for information on usage and redistribution of this
+# file.
+
 package require Tcl 8.5
 package require http
 package require tls
