@@ -19,8 +19,11 @@ package require logger
 ::http::register https 443 ::tls::socket
 
 namespace eval discord::gateway {
-    namespace export connect disconnect logWsMsg
+    namespace export connect disconnect setCallback logWsMsg
     namespace ensemble create
+
+    set log [logger::init discord::gateway]
+    ${log}::setlevel debug
 
     set LogWsMsg 0
     set MsgLogLevel debug
@@ -30,6 +33,36 @@ namespace eval discord::gateway {
     set LimitPeriod 60
     set LimitSend 120
     set LimitStatusChange 5
+
+    set EventCallbacks {
+        READY                       {}
+        RESUME                      {}
+        CHANNEL_CREATE              {}
+        CHANNEL_UPDATE              {}
+        CHANNEL_DELETE              {}
+        GUILD_CREATE                {}
+        GUILD_UPDATE                {}
+        GUILD_DELETE                {}
+        GUILD_BAN_ADD               {}
+        GUILD_BAN_REMOVE            {}
+        GUILD_EMOJI_UPDATE          {}
+        GUILD_INTEGRATIONS_UPDATE   {}
+        GUILD_MEMBER_REMOVE         {}
+        GUILD_MEMBER_UPDATE         {}
+        GUILD_MEMBER_CHUNKS         {}
+        GUILD_ROLE_UPDATE           {}
+        GUILD_ROLE_DELETE           {}
+        MESSAGE_CREATE              {}
+        MESSAGE_UPDATE              {}
+        MESSAGE_DELETE              {}
+        MESSAGE_DELETE_BULK         {}
+        PRESENCE_UPDATE             {}
+        TYPING_START                {}
+        USER_SETTINGS_UPDATE        {}
+        USER_UPDATE                 {}
+        VOICE_STATE_UPDATE          {}
+        VOICE_SERVER_UPDATE         {}
+    }
 
 # Compression only used for Dispatch "READY" event. Set CompressEnabled to 1 if
 # you are able to get mkZiplib onto your system.
@@ -41,9 +74,6 @@ namespace eval discord::gateway {
     } else {
         set DefCompress false
     }
-
-    set log [logger::init discord::gateway]
-    ${log}::setlevel debug
 
     set DefHeartbeatInterval 10000
     set Sockets [dict create]
@@ -75,24 +105,27 @@ namespace eval discord::gateway {
 #       Establish a WebSocket connection to the Gateway.
 #
 # Arguments:
-#       token   Bot token or OAuth2 bearer token.
-#       version Gateway API version. Defaults to 6.
+#       token       Bot token or OAuth2 bearer token.
+#       cmd         (optional) fully-qualified name of a callback procedure that
+#                   is invoked before the Identify message is sent. Accepts one
+#                   argument 'sock', which can be used to register Dispatch
+#                   event callbacks using discord::gateway::eventCallbacks.
 #
 # Results:
 #       Returns the connection's WebSocket object.
 
-proc discord::gateway::connect { token {version 6} } {
+proc discord::gateway::connect { token {cmd {}} } {
     variable log
     variable GatewayApiVer
     variable DefHeartbeatInterval
     variable DefCompress
-    if {![regexp {^\d+} $version]} {
-        set version $GatewayApiVer
-    }
-    set gateway "[discord::GetGateway]/?v=${version}&encoding=json"
+    variable EventCallbacks
+    set gateway "[discord::GetGateway]/?v=${GatewayApiVer}&encoding=json"
     ${log}::notice "Connecting to the Gateway: $gateway"
 
     set sock [websocket::open $gateway ::discord::gateway::Handler]
+    SetConnectionInfo $sock connectCallback $cmd
+    SetConnectionInfo $sock eventCallbacks [dict get $EventCallbacks]
     SetConnectionInfo $sock sendCount 0
     SetConnectionInfo $sock s null
     SetConnectionInfo $sock token $token
@@ -122,6 +155,35 @@ proc discord::gateway::disconnect { sock } {
 	set msg [string range $msg 0 124];
 	websocket::send $sock 8 $msg
     return
+}
+
+# discord::gateway::setCallback --
+#
+#       Register a callback procedure for a specified Dispatch event. The
+#       callback is invoked after the event is handled by EventHandler; it
+#       will accept two arguments, 'event' and 'data'. Refer to
+#       discord::gateway::DefaultCallback for an example.
+#
+# Arguments:
+#       sock    WebSocket object.
+#       event   Event name.
+#       cmd     Fully-qualified name of the callback command. Set this to the
+#               empty string to unregister the callback for an event.
+#
+# Results:
+#       Returns 1 if the event is supported, 0 otherwise.
+
+proc discord::gateway::setCallback { sock event cmd } {
+    variable log
+    set eventCallbacks [GetConnectionInfo $sock eventCallbacks]
+    if {![dict exists $eventCallbacks $event]} {
+        return 0
+    } else {
+        dict set eventCallbacks $event $cmd
+        SetConnectionInfo $sock eventCallbacks $eventCallbacks
+        ${log}::debug "Registered callback for event '$event': $cmd"
+        return 1
+    }
 }
 
 # discord::gateway::logWsMsg --
@@ -191,7 +253,7 @@ proc discord::gateway::Every {interval script} {
 #       Returns the connection detail.
 
 proc discord::gateway::GetConnectionInfo { sock what } {
-    return [dict get $::discord::gateway::Sockets $sock connInfo $what]
+    return [dict get $::discord::gateway::Sockets $sock $what]
 }
 
 # discord::gateway::SetConnectionInfo --
@@ -207,7 +269,7 @@ proc discord::gateway::GetConnectionInfo { sock what } {
 #       Returns a string of the connection detail.
 
 proc discord::gateway::SetConnectionInfo { sock what value } {
-    return [dict set ::discord::gateway::Sockets $sock connInfo $what $value]
+    return [dict set ::discord::gateway::Sockets $sock $what $value]
 }
 
 # discord::gateway::CheckOp --
@@ -269,11 +331,19 @@ proc discord::gateway::EventHandler { sock msg } {
                 SetConnectionInfo $sock _trace [dict get $d _trace]
             }
         }
-        default {
-            ${log}::warn "EventHandler: Event not implemented: $t"
-            return 0
-        }
     }
+    set eventCallbacks [GetConnectionInfo $sock eventCallbacks]
+    set callback {}
+    set knownEvent [dict exists $eventCallbacks $t]
+    if {$knownEvent} {
+        set callback [dict get $eventCallbacks $t]
+    } else {
+        ${log}::warn "EventHandler: Unknown Event: $t"
+    }
+    if {$callback == {}} {
+        set callback discord::gateway::DefaultCallback
+    }
+    after idle [list ::$callback $t $d]
     return 1
 }
 
@@ -383,6 +453,10 @@ proc discord::gateway::Handler { sock type msg } {
             }
         }
         connect {
+            set callback [GetConnectionInfo $sock connectCallback]
+            if {$callback != {}} {
+                ::$callback $sock
+            }
             after idle [list discord::gateway::Send $sock Identify]
         }
         close {
@@ -549,4 +623,19 @@ proc discord::gateway::MakeResume { sock } {
             token [GetConnectionInfo $sock token] \
             session_id [GetConnectionInfo $sock session_id] \
             seq [GetConnectionInfo $sock seq]]
+}
+
+# discord::gateway::DefaultCallback --
+#
+#       Stub for Dispatch events.
+#
+# Arguments:
+#       event   Event name.
+#       data    Dictionary representing a JSON object
+#
+# Results:
+#       None.
+
+proc discord::gateway::DefaultCallback { event data } {
+    return
 }
