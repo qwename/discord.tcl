@@ -42,23 +42,24 @@ namespace eval discord::gateway {
     set DefHeartbeatInterval 10000
     set Sockets [dict create]
 
-    set Op {
-        DISPATCH                0
-        HEARTBEAT               1
-        IDENTIFY                2
-        STATUS_UPDATE           3
-        VOICE_STATE_UPDATE      4
-        VOICE_SERVER_PING       5
-        RESUME                  6
-        RECONNECT               7
-        REQUEST_GUILD_MEMBERS   8
-        INVALID_SESSION         9
-        HELLO                   10
-        HEARTBEAT_ACK           11
+    set OpTokens {
+        0   DISPATCH
+        1   HEARTBEAT
+        2   IDENTIFY
+        3   STATUS_UPDATE
+        4   VOICE_STATE_UPDATE
+        5   VOICE_SERVER_PING
+        6   RESUME
+        7   RECONNECT
+        8   REQUEST_GUILD_MEMBERS
+        9   INVALID_SESSION
+        10  HELLO
+        11  HEARTBEAT_ACK
     }
-    set OpTokens [dict create]
-    foreach {token op} $Op {
-        dict set OpTokens $op $token
+    set ProcOps {
+        Heartbeat   1
+        Identify    2
+        Resume      6
     }
 
 }
@@ -113,7 +114,7 @@ proc discord::gateway::disconnect { sock } {
 
 # discord::gateway::logWsMsg --
 #
-#       Toggle logging of WebSocket text messages.
+#       Toggle logging of sent and received WebSocket text messages.
 #
 # Arguments:
 #       on      Disable printing when set to 0, enabled otherwise.
@@ -153,7 +154,9 @@ proc discord::gateway::logWsMsg { on {level "debug"} } {
 #       Returns the return value of the 'after' command.
 
 proc discord::gateway::Every {interval script} {
+    variable log
     variable EveryIds
+    ${log}::debug [info level 0]
     if {$interval eq "cancel"} {
         catch {after cancel $EveryIds($script)}
         return
@@ -247,7 +250,7 @@ proc discord::gateway::EventHandler { sock msg } {
             set interval [GetConnectionInfo $sock heartbeat_interval]
             ${log}::debug "EventHandler: Sending heartbeat every $interval ms"
             ::discord::gateway::Every $interval \
-                    [list ::discord::gateway::SendHeartbeat $sock]
+                    [list ::discord::gateway::Send $sock Heartbeat]
         }
         RESUME {    ;# Not much to do here
             if {[dict exists $d _trace]} {
@@ -289,10 +292,10 @@ proc discord::gateway::OpHandler { sock msg } {
             after idle [list discord::gateway::EventHandler $sock $msg]
         }
         RECONNECT {
-            after idle [list discord::gateway::SendResume $sock]
+            after idle [list discord::gateway::Send $sock Resume]
         }
         INVALID_SESSION {
-            after idle [list discord::gateway::SendIdentify $sock]
+            after idle [list discord::gateway::Send $sock Identify]
         }
         HELLO {
             SetConnectionInfo $sock heartbeat_interval \
@@ -325,7 +328,7 @@ proc discord::gateway::TextHandler { sock msg } {
     variable LogWsMsg
     variable MsgLogLevel
     if {$LogWsMsg} {
-        ${log}::${MsgLogLevel} $msg
+        ${log}::${MsgLogLevel} "TextHandler: $msg"
     }
     if {[catch {rest::format_json $msg} res]} {
         ${log}::error "TextHandler: $res"
@@ -368,10 +371,11 @@ proc discord::gateway::Handler { sock type msg } {
             }
         }
         connect {
-            after idle [list ::discord::gateway::SendIdentify $sock]
+            after idle [list ::discord::gateway::Send $sock Identify]
         }
         close {
-            ::discord::gateway::Every cancel [list ::discord::gateway::SendHeartbeat $sock]
+            ::discord::gateway::Every cancel \
+                    [list ::discord::gateway::Send $sock Heartbeat]
             ${log}::notice "Handler: Connection closed."
         }
         disconnect {
@@ -396,56 +400,64 @@ proc discord::gateway::Handler { sock type msg } {
 #
 # Arguments:
 #       sock    WebSocket object.
-#       opToken A token string that is one of the values in the dictionary
-#               discord::gateway::OpTokens.
-#       data    The data to be sent.
+#       opProc  Suffix of the Make* procedure that returns the message data.
 #
 # Results:
 #       Returns 1 if the message is sent successfully, and 0 otherwise.
 
-proc discord::gateway::Send { sock opToken data } {
+proc discord::gateway::Send { sock opProc } {
     variable log
-    variable Op
-    if ![dict exists $Op $opToken] {
-        ${log}::error "Invalid op name: '$opToken'"
+    variable ProcOps
+    variable LogWsMsg
+    variable MsgLogLevel
+    if {![dict exists $ProcOps $opProc]} {
+        ${log}::error "Invalid procedure suffix: '$opProc'"
         return 0
     }
-    set op [dict get $Op $opToken]
-
-    set payload [json::write::object op $op d $data]
-    if [catch {websocket::send $sock text $payload} res] {
-        ${log}::error "::websocket::send: $res"
+    set op [dict get $ProcOps $opProc]
+    set data [Make${opProc} $sock]
+    set msg [json::write::object op $op d $data]
+    if {$LogWsMsg} {
+        ${log}::${MsgLogLevel} "Send: $msg"
+    }
+    if [catch {websocket::send $sock text $msg} res] {
+        ${log}::error "websocket::send: $res"
         return 0
     }
 
     return 1
 }
 
-# discord::gateway::SendHeartbeat --
+# discord::gateway::MakeHeartbeat --
 #
-#       Tell the Gateway that you are alive. Do this periodically.
+#       Create a message to tell the Gateway that you are alive. Do this
+#       periodically.
 #
 # Arguments:
 #       sock    WebSocket object.
 #
 # Results:
-#       Returns 1 if the message is sent successfully, and 0 otherwise.
+#       Returns the last sequence number received.
 
-proc discord::gateway::SendHeartbeat { sock } {
-    return [Send $sock HEARTBEAT [GetConnectionInfo $sock seq]]
+proc discord::gateway::MakeHeartbeat { sock } {
+    return [GetConnectionInfo $sock seq]
 }
 
-# discord::gateway::SendIdentify --
+# discord::gateway::MakeIdentify --
 #
-#       Identify yourself to the Gateway.
+#       Create a message to identify yourself to the Gateway.
 #
 # Arguments:
 #       sock    WebSocket object.
+#       args    List of options and their values to set in the message. Prepend
+#               options with a '-'. Accepted options are: os, browser, device,
+#               referrer, referring_domain, compress, large_threshold, shard.
+#               Example: -os linux
 #
 # Results:
-#       Returns 1 if the message is sent successfully, and 0 otherwise.
+#       Returns a JSON object containing the required information.
 
-proc discord::gateway::SendIdentify { sock args } {
+proc discord::gateway::MakeIdentify { sock args } {
     variable log
     set token               [json::write::string \
                                     [GetConnectionInfo $sock token]]
@@ -471,7 +483,7 @@ proc discord::gateway::SendIdentify { sock args } {
             compress {
                 if {$value ni {true false}} {
                     ${log}::error \
-                            "SendIdentify: compress: Invalid value: '$value'"
+                            "MakeIdentify: compress: Invalid value: '$value'"
                     continue
                 }
             }
@@ -479,40 +491,39 @@ proc discord::gateway::SendIdentify { sock args } {
                 if {![string is integer -strict $value] \
                             || $value < 50 || $value > 250} {
                     ${log}::error \
-                        "SendIdentify: large_threshold: Invalid value: '$value'"
+                        "MakeIdentify: large_threshold: Invalid value: '$value'"
                 }
             }
         }
         set $opt $value
     }
-    set d [json::write::object \
-              token $token \
-              properties [json::write::object \
-                  {$os} $os \
-                  {$browser} $browser \
-                  {$device} $device \
-                  {$referrer} $referrer \
-                  {$referring_domain} $referring_domain] \
-              compress $compress \
-              large_threshold $large_threshold \
-              shard $shard]
-    return [Send $sock IDENTIFY $d]
+    return [json::write::object \
+            token $token \
+            properties [json::write::object \
+                {$os} $os \
+                {$browser} $browser \
+                {$device} $device \
+                {$referrer} $referrer \
+                {$referring_domain} $referring_domain] \
+            compress $compress \
+            large_threshold $large_threshold \
+            shard $shard]
 }
 
-# discord::gateway::SendResume --
+# discord::gateway::MakeResume --
 #
-#       Resume a connection after you are disconnected from the Gateway.
+#       Create a message to resume a connection after you are disconnected from 
+#       the Gateway.
 #
 # Arguments:
 #       sock    WebSocket object.
 #
 # Results:
-#       Returns 1 if the message is sent successfully, and 0 otherwise.
+#       Returns a JSON object containing the required information.
 
-proc discord::gateway::SendResume { sock } {
-    set d [json::write::object \
+proc discord::gateway::MakeResume { sock } {
+    return [json::write::object \
             token [GetConnectionInfo $sock token] \
             session_id [GetConnectionInfo $sock session_id] \
             seq [GetConnectionInfo $sock seq]]
-    return [Send $sock RESUME $d]
 }
