@@ -70,16 +70,17 @@ namespace eval discord::gateway {
 #
 # Arguments:
 #       token   Bot token or OAuth2 bearer token.
+#       version Gateway API version. Defaults to 6.
 #
 # Results:
 #       Returns the connection's WebSocket object.
 
-proc discord::gateway::connect { token } {
+proc discord::gateway::connect { token {version 6} } {
     variable log
     variable DefHeartbeatInterval
     variable DefCompress
-    set gateway [discord::GetGateway]
-    ${log}::notice "Connecting to the Gateway: '$gateway'"
+    set gateway "[discord::GetGateway]/?v=${version}"
+    ${log}::notice "Connecting to the Gateway: $gateway"
 
     set sock [websocket::open $gateway ::discord::gateway::Handler]
     SetConnectionInfo $sock s null
@@ -299,7 +300,7 @@ proc discord::gateway::OpHandler { sock msg } {
         }
         HELLO {
             SetConnectionInfo $sock heartbeat_interval \
-                    [dict get $msg heartbeat_interval]
+                    [dict get $msg d heartbeat_interval]
         }
         HEARTBEAT_ACK {
             ${log}::debug "OpHandler: Heartbeat ACK received"
