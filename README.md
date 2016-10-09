@@ -7,6 +7,7 @@ Supports Discord Gateway API version 6.
 
 - Can only connect to the Gateway
 - Dispatch events supported: Restart, Resume
+- Callbacks can be registered for all other events
 
 ### Libraries
 
@@ -21,8 +22,26 @@ package require discord
 
 ${discord::log}::setlevel info
 
+proc messageCreate { event data } {
+    set timestamp [dict get $data timestamp]
+    set username [dict get $data author username]
+    set discriminator [dict get $data author discriminator]
+    set content [dict get $data content]
+    puts "$timestamp ${username}#${discriminator}: $content"
+}
+
+proc registerCallbacks { sock } {
+    discord::gateway setCallback $sock MESSAGE_CREATE messageCreate
+}
+
 set token "your token here"
-discord::gateway connect $token
+set sock [discord::gateway connect $token registerCallbacks]
+```
+
+Example output
+```
+[Sun Oct 09 14:43:01 EDT 2016] [discord::gateway] [notice] 'Connecting to the Gateway: wss://gateway.discord.gg/?v=6&encoding=json'
+2016-10-09T18:43:36.651000+00:00 qwename#5406: hi there
 ```
 
 ### Links
@@ -31,4 +50,4 @@ discord::gateway connect $token
 
 ### TODO
 
-- Implement more Dispatch events
+- Implement Dispatch event callbacks
