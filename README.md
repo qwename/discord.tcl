@@ -7,7 +7,7 @@ Supports Discord Gateway API version 6.
 
 - Can only connect to the Gateway
 - Dispatch events supported: Restart, Resume
-- Callbacks can be registered for all other events
+- Callbacks can be registered for all events
 
 ### Libraries
 
@@ -50,4 +50,4 @@ Example output
 
 ### TODO
 
-- Implement Dispatch event callbacks
+- Implement Dispatch event callbacks in namespace discord
