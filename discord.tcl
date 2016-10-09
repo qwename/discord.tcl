@@ -34,23 +34,23 @@ namespace eval discord {
 #       Returns the Gateway wss URL string.
 
 proc discord::GetGateway { {cached 1} } {
-    global discord::ApiBaseUrl
-    global discord::GatewayUrl
+    variable ApiBaseUrl
+    variable GatewayUrl
     if {$GatewayUrl ne "" && $cached} {
         return $GatewayUrl
     }
-    set res [::rest::simple ${ApiBaseUrl}/gateway {} {
+    set res [rest::simple ${ApiBaseUrl}/gateway {} {
         method get
         format json
     }]
-    set GatewayUrl [dict get [::rest::format_json $res] url]
+    set GatewayUrl [dict get [rest::format_json $res] url]
     return $GatewayUrl
 }
 
 # discord::Every --
 #
 #       Run a command periodically at the specified interval. Allows
-#       cancellation of the command.
+#       cancellation of the command. Must be called using the full name.
 #
 # Arguments:
 #       interval    Duration in milliseconds between each command execution.
@@ -61,12 +61,13 @@ proc discord::GetGateway { {cached 1} } {
 #       Returns the return value of the 'after' command.
 
 proc discord::Every {interval script} {
+    variable EveryIds
     if {$interval eq "cancel"} {
-        catch {after cancel $::discord::EveryIds($script)}
+        catch {after cancel $EveryIds($script)}
         return
     }
     set afterId [after $interval [info level 0]]
-    set ::discord::EveryIds($script) $afterId
+    set EveryIds($script) $afterId
     uplevel #0 $script
     return $afterId
 }
