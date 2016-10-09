@@ -25,6 +25,12 @@ namespace eval discord::gateway {
     set LogWsMsg 0
     set MsgLogLevel debug
 
+    set GatewayApiVer 6
+
+    set LimitPeriod 60
+    set LimitSend 120
+    set LimitStatusChange 5
+
 # Compression only used for Dispatch "READY" event. Set CompressEnabled to 1 if
 # you are able to get mkZiplib onto your system.
 
@@ -77,12 +83,17 @@ namespace eval discord::gateway {
 
 proc discord::gateway::connect { token {version 6} } {
     variable log
+    variable GatewayApiVer
     variable DefHeartbeatInterval
     variable DefCompress
-    set gateway "[discord::GetGateway]/?v=${version}"
+    if {![regexp {^\d+} $version]} {
+        set version $GatewayApiVer
+    }
+    set gateway "[discord::GetGateway]/?v=${version}&encoding=json"
     ${log}::notice "Connecting to the Gateway: $gateway"
 
     set sock [websocket::open $gateway ::discord::gateway::Handler]
+    SetConnectionInfo $sock sendCount 0
     SetConnectionInfo $sock s null
     SetConnectionInfo $sock token $token
     SetConnectionInfo $sock session_id null
@@ -329,17 +340,17 @@ proc discord::gateway::TextHandler { sock msg } {
     variable LogWsMsg
     variable MsgLogLevel
     if {$LogWsMsg} {
-        ${log}::${MsgLogLevel} "TextHandler: $msg"
+        ${log}::${MsgLogLevel} "TextHandler: msg: $msg"
     }
     if {[catch {rest::format_json $msg} res]} {
         ${log}::error "TextHandler: $res"
         return 0
     }
     if {[dict exists $res op]} {
-        after idle [list ::discord::gateway::OpHandler $sock $res]
+        after idle [list discord::gateway::OpHandler $sock $res]
         return 1
     } else {
-        ${log}::warn "TextHandler: no op: $msg"
+        ${log}::warn "TextHandler: no op: $res"
         return 0
     }
 }
@@ -361,18 +372,18 @@ proc discord::gateway::Handler { sock type msg } {
     ${log}::debug "Handler: type: $type"
     switch -glob -- $type {
         text {
-            after idle [list ::discord::gateway::TextHandler $sock $msg]
+            after idle [list discord::gateway::TextHandler $sock $msg]
         }
         binary {
             if {![catch {::inflate $msg} res]} {
-                after idle [list ::discord::gateway::TextHandler $sock $res]
+                after idle [list discord::gateway::TextHandler $sock $res]
             } else {
                 set bytes [string length $res]
                 ${log}::warn "Handler: $bytes bytes of binary data."
             }
         }
         connect {
-            after idle [list ::discord::gateway::Send $sock Identify]
+            after idle [list discord::gateway::Send $sock Identify]
         }
         close {
             ::discord::gateway::Every cancel \
@@ -397,7 +408,7 @@ proc discord::gateway::Handler { sock type msg } {
 
 # discord::gateway::Send --
 #
-#       Send WebSocket messages to the Gateway.
+#       Send WebSocket messages to the Gateway, rate limited to 120 per minute.
 #
 # Arguments:
 #       sock    WebSocket object.
@@ -411,6 +422,17 @@ proc discord::gateway::Send { sock opProc } {
     variable ProcOps
     variable LogWsMsg
     variable MsgLogLevel
+    variable LimitPeriod
+    variable LimitSend
+    set sendCount [GetConnectionInfo $sock sendCount]
+    if {$sendCount == 0} {
+        after [expr {$LimitPeriod * 1000}] \
+                [list discord::gateway::SetConnectionInfo $sock sendCount 0]
+    }
+    if {$sendCount >= $LimitSend} {
+        ${log}::warn "Send: Reached $LimitSend messages sent in $LimitPeriod s"
+        return 0
+    }
     if {![dict exists $ProcOps $opProc]} {
         ${log}::error "Invalid procedure suffix: '$opProc'"
         return 0
@@ -425,7 +447,7 @@ proc discord::gateway::Send { sock opProc } {
         ${log}::error "websocket::send: $res"
         return 0
     }
-
+    SetConnectionInfo $sock sendCount [incr sendCount]
     return 1
 }
 
