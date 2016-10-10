@@ -12,7 +12,7 @@ package require Tcl 8.5
 package require http
 package require tls
 package require websocket
-package require rest
+package require json
 package require json::write
 package require logger
 
@@ -162,7 +162,7 @@ proc discord::gateway::disconnect { sock } {
 #       Register a callback procedure for a specified Dispatch event. The
 #       callback is invoked after the event is handled by EventHandler; it
 #       will accept two arguments, 'event' and 'data'. Refer to
-#       discord::gateway::DefaultCallback for an example.
+#       discord::gateway::DefEventCallback for an example.
 #
 # Arguments:
 #       sock    WebSocket object.
@@ -341,7 +341,7 @@ proc discord::gateway::EventHandler { sock msg } {
         ${log}::warn "EventHandler: Unknown Event: $t"
     }
     if {$callback == {}} {
-        set callback discord::gateway::DefaultCallback
+        set callback discord::gateway::DefEventCallback
     }
     after idle [list ::$callback $t $d]
     return 1
@@ -412,7 +412,7 @@ proc discord::gateway::TextHandler { sock msg } {
     if {$LogWsMsg} {
         ${log}::${MsgLogLevel} "TextHandler: msg: $msg"
     }
-    if {[catch {rest::format_json $msg} res]} {
+    if {[catch {json::json2dict $msg} res]} {
         ${log}::error "TextHandler: $res"
         return 0
     }
@@ -625,7 +625,7 @@ proc discord::gateway::MakeResume { sock } {
             seq [GetConnectionInfo $sock seq]]
 }
 
-# discord::gateway::DefaultCallback --
+# discord::gateway::DefEventCallback --
 #
 #       Stub for Dispatch events.
 #
@@ -636,6 +636,6 @@ proc discord::gateway::MakeResume { sock } {
 # Results:
 #       None.
 
-proc discord::gateway::DefaultCallback { event data } {
+proc discord::gateway::DefEventCallback { event data } {
     return
 }

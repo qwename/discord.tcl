@@ -8,8 +8,10 @@
 # file.
 
 package require Tcl 8.5
-package require rest
+package require http
+package require json
 package require logger
+
 
 namespace eval discord {
     set version 0.1
@@ -21,6 +23,8 @@ namespace eval discord {
     set GatewayUrl ""
 
 }
+
+::http::config -useragent "DiscordBot (discord.tcl, ${::discord::version})"
 
 # discord::GetGateway --
 #
@@ -39,11 +43,11 @@ proc discord::GetGateway { {cached 1} } {
     if {$GatewayUrl ne "" && $cached} {
         return $GatewayUrl
     }
-    set res [rest::simple ${ApiBaseUrl}/gateway {} {
-        method get
-        format json
-    }]
-    set GatewayUrl [dict get [rest::format_json $res] url]
+    set token [http::geturl ${ApiBaseUrl}/gateway]
+    upvar #0 $token state
+    set data [json::json2dict $state(body)]
+    http::cleanup $token
+    set GatewayUrl [dict get $data url]
     return $GatewayUrl
 }
 

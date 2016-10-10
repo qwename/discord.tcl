@@ -11,9 +11,8 @@ Supports Discord Gateway API version 6.
 
 ### Libraries
 
-- [Tcllib 1.18](http://www.tcl.tk/software/tcllib) (*websocket*, *rest*, *json::write*, *logger*)
+- [Tcllib 1.18](http://www.tcl.tk/software/tcllib) (*websocket*, *json*, *json::write*, *logger*)
 - [TLS 1.6.7](https://sourceforge.net/projects/tls) (*tls*)
-- [tDOM 0.8.3](https://tdom.github.io) (*rest*)
 - [mkZiplib 1.0](http://mkextensions.sourceforge.net) (optional, for compression of Dispatch "READY" event)
 
 ### Usage
