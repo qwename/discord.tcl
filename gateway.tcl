@@ -22,19 +22,19 @@ namespace eval discord::gateway {
     namespace export connect disconnect setCallback logWsMsg
     namespace ensemble create
 
-    set log [logger::init discord::gateway]
+    variable log [::logger::init discord::gateway]
     ${log}::setlevel debug
 
-    set LogWsMsg 0
-    set MsgLogLevel debug
+    variable LogWsMsg 0
+    variable MsgLogLevel debug
 
-    set GatewayApiVer 6
+    variable GatewayApiVer 6
 
-    set LimitPeriod 60
-    set LimitSend 120
-    set LimitStatusChange 5
+    variable LimitPeriod 60
+    variable LimitSend 120
+    variable LimitStatusChange 5
 
-    set EventCallbacks {
+    variable EventCallbacks {
         READY                       {}
         RESUME                      {}
         CHANNEL_CREATE              {}
@@ -64,21 +64,20 @@ namespace eval discord::gateway {
         VOICE_SERVER_UPDATE         {}
     }
 
-# Compression only used for Dispatch "READY" event. Set CompressEnabled to 1 if
-# you are able to get mkZiplib onto your system.
+    # Compression only used for Dispatch "READY" event. Set CompressEnabled to 1
+    # if you are able to get mkZiplib onto your system.
 
-    set CompressEnabled 0
+    variable CompressEnabled 0
+    variable DefCompress false
     if $CompressEnabled {
         package require mkZiplib
         set DefCompress true
-    } else {
-        set DefCompress false
     }
 
-    set DefHeartbeatInterval 10000
-    set Sockets [dict create]
+    variable DefHeartbeatInterval 10000
+    variable Sockets [dict create]
 
-    set OpTokens {
+    variable OpTokens {
         0   DISPATCH
         1   HEARTBEAT
         2   IDENTIFY
@@ -92,7 +91,7 @@ namespace eval discord::gateway {
         10  HELLO
         11  HEARTBEAT_ACK
     }
-    set ProcOps {
+    variable ProcOps {
         Heartbeat   1
         Identify    2
         Resume      6
@@ -112,7 +111,8 @@ namespace eval discord::gateway {
 #                   event callbacks using discord::gateway::eventCallbacks.
 #
 # Results:
-#       Returns the connection's WebSocket object.
+#       Returns the connection's WebSocket object if successful, an empty string
+#       otherwise.
 
 proc discord::gateway::connect { token {cmd {}} } {
     variable log
@@ -120,14 +120,21 @@ proc discord::gateway::connect { token {cmd {}} } {
     variable DefHeartbeatInterval
     variable DefCompress
     variable EventCallbacks
-    set gateway "[discord::GetGateway]/?v=${GatewayApiVer}&encoding=json"
+    set gateway [discord::GetGateway]
+    if {$gateway eq ""} {
+        ${log}::error "connect: Unable to get Gateway URL."
+        return ""
+    }
+    append gateway "/?v=${GatewayApiVer}&encoding=json"
     ${log}::notice "Connecting to the Gateway: $gateway"
-
-    set sock [websocket::open $gateway ::discord::gateway::Handler]
+    if {[catch {::websocket::open $gateway ::discord::gateway::Handler} sock]} {
+        ${log}::error "connect: $gateway: $sock"
+        return ""
+    }
     SetConnectionInfo $sock connectCallback $cmd
     SetConnectionInfo $sock eventCallbacks [dict get $EventCallbacks]
     SetConnectionInfo $sock sendCount 0
-    SetConnectionInfo $sock s null
+    SetConnectionInfo $sock seq null
     SetConnectionInfo $sock token $token
     SetConnectionInfo $sock session_id null
     SetConnectionInfo $sock heartbeat_interval $DefHeartbeatInterval
@@ -153,7 +160,7 @@ proc discord::gateway::disconnect { sock } {
 
 	set msg [binary format Su 1000]
 	set msg [string range $msg 0 124];
-	websocket::send $sock 8 $msg
+	::websocket::send $sock 8 $msg
     return
 }
 
@@ -412,7 +419,7 @@ proc discord::gateway::TextHandler { sock msg } {
     if {$LogWsMsg} {
         ${log}::${MsgLogLevel} "TextHandler: msg: $msg"
     }
-    if {[catch {json::json2dict $msg} res]} {
+    if {[catch {::json::json2dict $msg} res]} {
         ${log}::error "TextHandler: $res"
         return 0
     }
@@ -458,6 +465,7 @@ proc discord::gateway::Handler { sock type msg } {
                 ::$callback $sock
             }
             after idle [list discord::gateway::Send $sock Identify]
+            ${log}::notice "Handler: Connected."
         }
         close {
             ::discord::gateway::Every cancel \
@@ -466,7 +474,7 @@ proc discord::gateway::Handler { sock type msg } {
         }
         disconnect {
             dict unset Sockets $sock
-            ${log}::notice "Handler: Disconnect."
+            ${log}::notice "Handler: Disconnected."
         }
         ping {      ;# Not sure if Discord uses this.
             ${log}::notice "Handler: ping: $msg"
@@ -513,12 +521,12 @@ proc discord::gateway::Send { sock opProc } {
     }
     set op [dict get $ProcOps $opProc]
     set data [Make${opProc} $sock]
-    set msg [json::write::object op $op d $data]
+    set msg [::json::write::object op $op d $data]
     if {$LogWsMsg} {
         ${log}::${MsgLogLevel} "Send: $msg"
     }
-    if [catch {websocket::send $sock text $msg} res] {
-        ${log}::error "websocket::send: $res"
+    if [catch {::websocket::send $sock text $msg} res] {
+        ${log}::error "::websocket::send: $res"
         return 0
     }
     SetConnectionInfo $sock sendCount [incr sendCount]
@@ -556,16 +564,16 @@ proc discord::gateway::MakeHeartbeat { sock } {
 
 proc discord::gateway::MakeIdentify { sock args } {
     variable log
-    set token               [json::write::string \
+    set token               [::json::write::string \
                                     [GetConnectionInfo $sock token]]
-    set os                  [json::write::string linux]
-    set browser             [json::write::string "discord.tcl 0.1"]
-    set device              [json::write::string "discord.tcl 0.1"]
-    set referrer            [json::write::string ""]
-    set referring_domain    [json::write::string ""]
+    set os                  [::json::write::string linux]
+    set browser             [::json::write::string "discord.tcl 0.1"]
+    set device              [::json::write::string "discord.tcl 0.1"]
+    set referrer            [::json::write::string ""]
+    set referring_domain    [::json::write::string ""]
     set compress            [GetConnectionInfo $sock compress]
     set large_threshold     50
-    set shard               [json::write::array 0 1]
+    set shard               [::json::write::array 0 1]
     foreach { option value } $args {
         if {[string index $option 0] ne -} {
             continue
@@ -594,9 +602,9 @@ proc discord::gateway::MakeIdentify { sock args } {
         }
         set $opt $value
     }
-    return [json::write::object \
+    return [::json::write::object \
             token $token \
-            properties [json::write::object \
+            properties [::json::write::object \
                 {$os} $os \
                 {$browser} $browser \
                 {$device} $device \
@@ -619,7 +627,7 @@ proc discord::gateway::MakeIdentify { sock args } {
 #       Returns a JSON object containing the required information.
 
 proc discord::gateway::MakeResume { sock } {
-    return [json::write::object \
+    return [::json::write::object \
             token [GetConnectionInfo $sock token] \
             session_id [GetConnectionInfo $sock session_id] \
             seq [GetConnectionInfo $sock seq]]

@@ -1,4 +1,4 @@
-# discord.tcl 0.1
+# discord.tcl 0.2.0
 Discord API library writtten in Tcl.
 Tested with Tcl 8.5.
 Supports Discord Gateway API version 6.
@@ -6,8 +6,7 @@ Supports Discord Gateway API version 6.
 ### Status
 
 - Can only connect to the Gateway
-- Dispatch events supported: Restart, Resume
-- Callbacks can be registered for all events
+- Callbacks can be registered for all Dispatch events
 
 ### Libraries
 
@@ -16,6 +15,23 @@ Supports Discord Gateway API version 6.
 - [mkZiplib 1.0](http://mkextensions.sourceforge.net) (optional, for compression of Dispatch "READY" event)
 
 ### Usage
+Use provided event handling and local state tracking.
+```
+package require discord
+
+${discord::log}::setlevel info
+
+set token "your token here"
+set session [discord connect $token]
+
+puts "Token: [$session var token]"
+
+vwait forever
+
+# Cleanup
+discord disconnect $session
+```
+DIY
 ```
 package require discord
 
@@ -35,6 +51,11 @@ proc registerCallbacks { sock } {
 
 set token "your token here"
 set sock [discord::gateway connect $token registerCallbacks]
+
+vwait forever
+
+# Cleanup
+discord::gateway disconnect $sock
 ```
 
 Example output
