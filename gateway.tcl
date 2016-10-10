@@ -499,11 +499,12 @@ proc discord::gateway::Handler { sock type msg } {
 # Arguments:
 #       sock    WebSocket object.
 #       opProc  Suffix of the Make* procedure that returns the message data.
+#       args    Arguments to pass to opProc.
 #
 # Results:
 #       Returns 1 if the message is sent successfully, and 0 otherwise.
 
-proc discord::gateway::Send { sock opProc } {
+proc discord::gateway::Send { sock opProc args } {
     variable log
     variable ProcOps
     variable LogWsMsg
@@ -524,7 +525,7 @@ proc discord::gateway::Send { sock opProc } {
         return 0
     }
     set op [dict get $ProcOps $opProc]
-    set data [Make${opProc} $sock]
+    set data [Make${opProc} $sock {*}$args]
     set msg [::json::write::object op $op d $data]
     if {$LogWsMsg} {
         ${log}::${MsgLogLevel} "Send: $msg"
