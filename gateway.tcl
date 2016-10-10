@@ -109,12 +109,15 @@ namespace eval discord::gateway {
 #                   is invoked before the Identify message is sent. Accepts one
 #                   argument 'sock', which can be used to register Dispatch
 #                   event callbacks using discord::gateway::eventCallbacks.
+#       shardInfo   (optional) list with two elements, the shard ID and number
+#                   of shards. Defaults to {0 1}, meaning shard ID 0 and 1 shard
+#                   in total.
 #
 # Results:
 #       Returns the connection's WebSocket object if successful, an empty string
 #       otherwise.
 
-proc discord::gateway::connect { token {cmd {}} } {
+proc discord::gateway::connect { token {cmd {}} {shardInfo {0 1}} } {
     variable log
     variable GatewayApiVer
     variable DefHeartbeatInterval
@@ -134,6 +137,7 @@ proc discord::gateway::connect { token {cmd {}} } {
     SetConnectionInfo $sock connectCallback $cmd
     SetConnectionInfo $sock eventCallbacks [dict get $EventCallbacks]
     SetConnectionInfo $sock sendCount 0
+    SetConnectionInfo $sock shard $shardInfo
     SetConnectionInfo $sock seq null
     SetConnectionInfo $sock token $token
     SetConnectionInfo $sock session_id null
@@ -573,7 +577,20 @@ proc discord::gateway::MakeIdentify { sock args } {
     set referring_domain    [::json::write::string ""]
     set compress            [GetConnectionInfo $sock compress]
     set large_threshold     50
-    set shard               [::json::write::array 0 1]
+    set shardInfo [GetConnectionInfo $sock shard]
+    set shardId [lindex $shardInfo 0]
+    set numShards [lindex $shardInfo 1]
+    if {![string is integer -strict $numShards] || $numShards < 1} {
+        ${log}::warning \
+                "MakeIdentify: Invalid num_shards, setting to 1: $numShards"
+        set numShards 1
+    }
+    if {![string is integer -strict $shardId] || $shardId < 0 \
+            || $numShards <= $shardId} {
+        ${log}::warning "MakeIdentify: Invalid shard_id, setting to 0: $shardId"
+        set shardId 0
+    }
+    set shard               [::json::write::array $shardId $numShards]
     foreach { option value } $args {
         if {[string index $option 0] ne -} {
             continue
@@ -581,7 +598,7 @@ proc discord::gateway::MakeIdentify { sock args } {
         set opt [string range $option 1 end]
         if {$opt ni {os browser device referrer referring_domain compress
                       large_threshold shard}} {
-            ${log}::error "Invalid option: '$opt'"
+            ${log}::error "MakeIdentify: Invalid option: '$opt'"
             continue
         }
         switch -glob -- $opt {
@@ -597,6 +614,7 @@ proc discord::gateway::MakeIdentify { sock args } {
                             || $value < 50 || $value > 250} {
                     ${log}::error \
                         "MakeIdentify: large_threshold: Invalid value: '$value'"
+                    continue
                 }
             }
         }

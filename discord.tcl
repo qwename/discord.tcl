@@ -37,15 +37,18 @@ namespace eval discord {
 #       session details continuously by monitoring Dispatch events.
 #
 # Arguments:
-#       token   Bot token or OAuth2 bearer token
+#       token       Bot token or OAuth2 bearer token
+#       shardInfo   (optional) list with two elements, the shard ID and number
+#                   of shards. Defaults to {0 1}, meaning shard ID 0 and 1 shard
+#                   in total.
 #
 # Results:
 #       Returns the name of a namespace that is created for the session if the
 #       connection is sucessful, and an empty string otherwise.
 
-proc discord::connect { token } {
+proc discord::connect { token {shardInfo {0 1}} } {
     variable SessionId
-    set sock [gateway::connect $token]
+    set sock [gateway::connect $token ::discord::SetupEventCallbacks $shardInfo]
     if {$sock eq ""} {
         return ""
     }
@@ -187,6 +190,22 @@ proc discord::Every {interval script} {
     set EveryIds($script) $afterId
     uplevel #0 $script
     return $afterId
+}
+
+# discord::SetupEventCallbacks
+#
+#       Set callbacks for relevant Gateway Dispatch events. Invoked after a
+#       connection to the Gateway is made, and before the Identify message is
+#       sent.
+#
+# Arguments:
+#       sock    WebSocket object.
+#
+# Results:
+#       None.
+
+proc discord::SetupEventCallbacks { sock } {
+    return
 }
 
 package provide discord $::discord::version
