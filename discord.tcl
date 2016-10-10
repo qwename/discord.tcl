@@ -99,6 +99,19 @@ proc discord::CreateSession { sessionName sock token } {
         namespace export variable
         namespace ensemble create
 
+        # ${sessionName}::variable --
+        #
+        #       Get or set a variable in the $sessionName namespace.
+        #
+        # Arguments:
+        #       name    Name of the variable.
+        #       args    (optional) value to set the variable to.
+        #
+        # Results:
+        #       If 'args' is specified, set 'name' to its value. If not
+        #       return the value of 'name'. An error will occur if the variable
+        #       does not exist and no value is specified.
+
         proc variable { name args } {
             ::variable $name
             if {[llength $args] > 0} {
