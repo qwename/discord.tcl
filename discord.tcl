@@ -47,6 +47,7 @@ namespace eval discord {
 #       connection is sucessful, and an empty string otherwise.
 
 proc discord::connect { token {shardInfo {0 1}} } {
+    variable log
     variable SessionId
     set sock [gateway::connect $token ::discord::SetupEventCallbacks $shardInfo]
     if {$sock eq ""} {
@@ -55,7 +56,12 @@ proc discord::connect { token {shardInfo {0 1}} } {
     set id $SessionId
     incr SessionId
     set name ::discord::session::$id
-    CreateSession $name $sock $token
+    set session [CreateSession $name $sock $token]
+    if {![gateway::bindSession $sock $session]} {
+        ${log}::error "connect: Failed to bind session to WebSocket '$sock'"
+        catch {gateway::disconnect $sock}
+        return ""
+    }
     return $name
 }
 
@@ -64,23 +70,23 @@ proc discord::connect { token {shardInfo {0 1}} } {
 #       Stop an existing session. Disconnect from the Discord Gateway.
 #
 # Arguments:
-#       sessionName Session name returned from discord::connect
+#       sessionNs   Session namespace returned from discord::connect
 #
 # Results:
-#       Deletes the session namespace. Returns 1 if sessionName is valid, and
-#       0 otherwise.
+#       Deletes the session namespace. Returns 1 if sessionNs is valid, and 0
+#       otherwise.
 
-proc discord::disconnect { sessionName } {
+proc discord::disconnect { sessionNs } {
     variable log
-    if {![namespace exists $sessionName]} {
-        ${log}::error "disconnect: Unknown session: '$sessionName'"
+    if {![namespace exists $sessionNs]} {
+        ${log}::error "disconnect: Unknown session: '$sessionNs'"
         return 0
     }
 
-    if {[catch {gateway::disconnect [$sessionName var sock]} res]} {
+    if {[catch {gateway::disconnect [$sessionNs var sock]} res]} {
         ${log}::error "disconnect: $res"
     }
-    namespace delete $sessionName
+    namespace delete $sessionNs
     return 1
 }
 
@@ -89,7 +95,7 @@ proc discord::disconnect { sessionName } {
 #       Create a namespace for a session.
 #
 # Arguments:
-#       sessionName Fully-qualified name namespace to create.
+#       sessionNs   Name of fully-qualified namespace to create.
 #       sock        WebSocket object.
 #       token       Bot token or OAuth2 bearer token.
 #
@@ -97,14 +103,14 @@ proc discord::disconnect { sessionName } {
 #       Creates a namespace with the variables sock and token present. Also
 #       defines the procedure 'variable'. Returns the namespace name.
 
-proc discord::CreateSession { sessionName sock token } {
-    namespace eval $sessionName {
+proc discord::CreateSession { sessionNs sock token } {
+    namespace eval $sessionNs {
         namespace export variable
         namespace ensemble create
 
-        # ${sessionName}::variable --
+        # ${sessionNs}::variable --
         #
-        #       Get or set a variable in the $sessionName namespace.
+        #       Get or set a variable in the $sessionNs namespace.
         #
         # Arguments:
         #       name    Name of the variable.
@@ -123,9 +129,12 @@ proc discord::CreateSession { sessionName sock token } {
             return [set $name]
         }
     }
-    $sessionName var sock $sock
-    $sessionName var token $token
-    return $sessionName
+    $sessionNs var sock $sock
+    $sessionNs var token $token
+    $sessionNs var self [dict create]
+    $sessionNs var guilds [dict create]
+    $sessionNs var dmChannels [dict create]
+    return $sessionNs
 }
 
 # discord::GetGateway --
@@ -180,7 +189,7 @@ proc discord::GetGateway { {cached 1} } {
 # Results:
 #       Returns the return value of the 'after' command.
 
-proc discord::Every {interval script} {
+proc discord::Every { interval script } {
     variable EveryIds
     if {$interval eq "cancel"} {
         catch {after cancel $EveryIds($script)}
@@ -205,6 +214,54 @@ proc discord::Every {interval script} {
 #       None.
 
 proc discord::SetupEventCallbacks { sock } {
+    gateway::setCallback $sock READY ::discord::EventReady
+    gateway::setCallback $sock GUILD_CREATE ::discord::EventGuildCreate
+    return
+}
+
+# discord::EventReady --
+#
+#       Callback procedure for Dispatch Ready event. Get our user object, list
+#       of DM channels, guilds, and session_id.
+#
+# Arguments:
+#       event       Event name.
+#       data        Dictionary representing a JSON object
+#       sessionNs   Name of session namespace.
+#
+# Results:
+#       Updates variables in session namespace.
+
+proc discord::EventReady { event data sessionNs } {
+    $sessionNs var self [dict get $data user]
+    foreach guild [dict get $data guilds] {
+        $sessionNs var guilds [dict get $guild id] $guild
+    }
+    foreach dmChannel [dict get $data private_channels] {
+        $sessionNs var dmChannels [dict get $dmChannel id] $dmChannel
+    }
+    $sessionNs var sessionId [dict get $data session_id]
+    return
+}
+
+# discord::EventGuildCreate --
+#
+#       Callback procedure for Dispatch Guild Create event.
+#
+# Arguments:
+#       event       Event name.
+#       data        Dictionary representing a JSON object
+#       sessionNs   Name of session namespace.
+#
+# Results:
+#       Update guild information in session guilds.
+
+proc discord::EventGuildCreate { event data sessionNs } {
+    variable log
+    set id [dict get $data id]
+    dict set ${sessionNs}::guilds $id $data
+    set name [dict get $data name]
+    ${log}::debug "Guild '$name' ($id) ready."
     return
 }
 
