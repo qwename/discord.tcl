@@ -47,9 +47,11 @@ namespace eval discord::gateway {
         GUILD_BAN_REMOVE            {}
         GUILD_EMOJIS_UPDATE         {}
         GUILD_INTEGRATIONS_UPDATE   {}
+        GUILD_MEMBER_ADD            {}
         GUILD_MEMBER_REMOVE         {}
         GUILD_MEMBER_UPDATE         {}
         GUILD_MEMBER_CHUNKS         {}
+        GUILD_ROLE_CREATE           {}
         GUILD_ROLE_UPDATE           {}
         GUILD_ROLE_DELETE           {}
         MESSAGE_CREATE              {}
