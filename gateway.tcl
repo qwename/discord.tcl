@@ -19,7 +19,7 @@ package require logger
 ::http::register https 443 ::tls::socket
 
 namespace eval discord::gateway {
-    namespace export connect disconnect setCallback logWsMsg
+    namespace export connect disconnect setCallback bindSession logWsMsg
     namespace ensemble create
 
     variable log [::logger::init discord::gateway]
@@ -143,6 +143,7 @@ proc discord::gateway::connect { token {cmd {}} {shardInfo {0 1}} } {
     SetConnectionInfo $sock session_id null
     SetConnectionInfo $sock heartbeat_interval $DefHeartbeatInterval
     SetConnectionInfo $sock compress $DefCompress
+    SetConnectionInfo $sock session ""
     return $sock
 }
 
@@ -172,8 +173,9 @@ proc discord::gateway::disconnect { sock } {
 #
 #       Register a callback procedure for a specified Dispatch event. The
 #       callback is invoked after the event is handled by EventHandler; it
-#       will accept two arguments, 'event' and 'data'. Refer to
-#       discord::gateway::DefEventCallback for an example.
+#       will accept two required arguments, 'event' and 'data', and an optional
+#       argument 'session'. Refer to discord::gateway::DefEventCallback for an
+#       example.
 #
 # Arguments:
 #       sock    WebSocket object.
@@ -193,6 +195,27 @@ proc discord::gateway::setCallback { sock event cmd } {
         dict set eventCallbacks $event $cmd
         SetConnectionInfo $sock eventCallbacks $eventCallbacks
         ${log}::debug "Registered callback for event '$event': $cmd"
+        return 1
+    }
+}
+
+# discord::gateway::bindSession --
+#
+#       Set the session namespace that a WebSocket object belongs to.
+#
+# Arguments:
+#       sock        WebSocket object.
+#       sessionNs   Session namespace returned by discord::connect
+#
+# Results:
+#       Returns 1 if successful, and 0 otherwise.
+
+proc discord::gateway::bindSession { sock sessionNs } {
+    variable log
+    if {[catch {SetConnectionInfo $sock session $sessionNs} res]} {
+        ${log}::error "bindSession: $res"
+        return 0
+    } else {
         return 1
     }
 }
@@ -354,7 +377,7 @@ proc discord::gateway::EventHandler { sock msg } {
     if {$callback == {}} {
         set callback discord::gateway::DefEventCallback
     }
-    after idle [list ::$callback $t $d]
+    after idle [list ::$callback $t $d [GetConnectionInfo $sock session]]
     return 1
 }
 
@@ -657,12 +680,13 @@ proc discord::gateway::MakeResume { sock } {
 #       Stub for Dispatch events.
 #
 # Arguments:
-#       event   Event name.
-#       data    Dictionary representing a JSON object
+#       event       Event name.
+#       data        Dictionary representing a JSON object
+#       sessionNs   (option) name of session namespace.
 #
 # Results:
 #       None.
 
-proc discord::gateway::DefEventCallback { event data } {
+proc discord::gateway::DefEventCallback { event data {sessionNs ""} } {
     return
 }
