@@ -198,7 +198,6 @@ proc discord::callback::event::GuildBan { event data sessionNs } {
     return
 }
 
-
 # discord::callback::event::GuildMember --
 #
 #       Callback procedure for Dispatch Guild Member events Add, Remove, Update.
@@ -256,4 +255,63 @@ proc discord::callback::event::GuildMember { event data sessionNs } {
     }
     ${log}::debug [join "$event '$guildName' ($guildId):" \
             "${username}#$discriminator ($id)"
+    return
+}
+
+# discord::callback::event::GuildRole --
+#
+#       Callback procedure for Dispatch Guild Role events Create, Update,
+#       Delete.
+#
+# Arguments:
+#       event       Event name.
+#       data        Dictionary representing a JSON object
+#       sessionNs   Name of session namespace.
+#
+# Results:
+#       Modify session guild information.
+
+proc discord::callback::event::GuildRole { event data sessionNs } {
+    set log [set ${sessionNs}::log]
+    set role [dict get $data role]
+    foreach field {id name} {
+        set $field [dict get $role $field]
+    }
+    set guildId [dict get $data guild_id]
+    set roles [dict get [set ${sessionNs}::guilds] $guildId roles]
+    switch $event {
+        GUILD_ROLE_CREATE {
+            lappend roles $role
+            dict set ${sessionNs}::guilds $guildId roles $roles
+        }
+        GUILD_ROLE_UPDATE {
+            set newRoles [list $role]
+            foreach r $roles {
+                if {$id == [dict get $r id]} {
+                    continue
+                } else {
+                    lappend newRoles $r
+                }
+            }
+            dict set ${sessionNs}::guilds $guildId roles $newRoles
+        }
+        GUILD_ROLE_DELETE {
+            set newRoles [list]
+            foreach r $roles {
+                if {$id == [dict get $r id]} {
+                    continue
+                } else {
+                    lappend newRoles $r
+                }
+            }
+            dict set ${sessionNs}::guilds $guildId roles $newRoles
+        }
+        default {
+            ${log}::error "GuildMember: Invalid event: '$event'"
+            return
+        }
+    }
+    set guildName [dict get [set ${sessionNs}::guilds] $guildId name]
+    ${log}::debug "$event '$guildName' ($guildId): '$name' ($id)"
+    return
 }

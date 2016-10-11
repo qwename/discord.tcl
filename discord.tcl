@@ -245,6 +245,9 @@ proc discord::SetupEventCallbacks { sock } {
     gateway::setCallback $sock GUILD_MEMBER_ADD ${ns}::GuildMember
     gateway::setCallback $sock GUILD_MEMBER_REMOVE ${ns}::GuildMember
     gateway::setCallback $sock GUILD_MEMBER_UPDATE ${ns}::GuildMember
+    gateway::setCallback $sock GUILD_ROLE_CREATE ${ns}::GuildRole
+    gateway::setCallback $sock GUILD_ROLE_UPDATE ${ns}::GuildRole
+    gateway::setCallback $sock GUILD_ROLE_DELETE ${ns}::GuildRole
     return
 }
 
