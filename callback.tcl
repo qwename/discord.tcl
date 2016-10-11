@@ -76,10 +76,11 @@ proc discord::callback::event::Channel { event data sessionNs } {
             }
         }
         set user [dict get $data recipient]
+        set userId [dict get $user id]
         foreach field {username discriminator} {
             set $field [dict get $user $field]
         }
-        ${log}::debug "$event $typeName: ${username}#$discriminator"
+        ${log}::debug "$typeName $event: ${username}#$discriminator ($userId)"
     } else {
         set guildId [dict get $data guild_id]
         set channels [dict get [set ${sessionNs}::guilds] $guildId channels]
@@ -195,4 +196,64 @@ proc discord::callback::event::GuildBan { event data sessionNs } {
         }
     }
     return
+}
+
+
+# discord::callback::event::GuildMember --
+#
+#       Callback procedure for Dispatch Guild Member events Add, Remove, Update.
+#
+# Arguments:
+#       event       Event name.
+#       data        Dictionary representing a JSON object
+#       sessionNs   Name of session namespace.
+#
+# Results:
+#       Modify session guild information.
+
+proc discord::callback::event::GuildMember { event data sessionNs } {
+    set log [set ${sessionNs}::log]
+    set user [dict get $data user]
+    set id [dict get $user id]
+    set guildId [dict get $data guild_id]
+    set members [dict get [set ${sessionNs}::guilds] $guildId members]
+    switch $event {
+        GUILD_MEMBER_ADD {
+            lappend members [dict remove $data guild_id]
+            dict set ${sessionNs}::guilds $guildId members $members
+        }
+        GUILD_MEMBER_REMOVE {
+            set newMembers [list]
+            foreach member $members {
+                if {$id == [dict get $member user id]} {
+                    continue
+                } else {
+                    lappend newMembers $member
+                }
+            }
+            dict set ${sessionNs}::guilds $guildId members $newMembers
+        }
+        GUILD_MEMBER_UPDATE {
+            set newMembers [list]
+            foreach member $members {
+                if {$id == [dict get $member user id]} {
+                    dict for {field value} [dict remove $data guild_id] {
+                        dict set member $field $value
+                    }
+                }
+                lappend newMembers $member
+            }
+            dict set ${sessionNs}::guilds $guildId members $newMembers
+        }
+        default {
+            ${log}::error "GuildMember: Invalid event: '$event'"
+            return
+        }
+    }
+    set guildName [dict get [set ${sessionNs}::guilds] $guildId name]
+    foreach field {username discriminator} {
+        set $field [dict get $user $field]
+    }
+    ${log}::debug [join "$event '$guildName' ($guildId):" \
+            "${username}#$discriminator ($id)"
 }
