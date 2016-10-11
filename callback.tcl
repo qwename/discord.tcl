@@ -33,12 +33,15 @@ proc discord::callback::event::Ready { event data sessionNs } {
         $sessionNs var dmChannels [dict get $dmChannel id] $dmChannel
     }
     $sessionNs var sessionId [dict get $data session_id]
+
+    set log $::discord::log
+    ${log}::debug "Ready"
     return
 }
 
-# discord::callback::event::ChannelCreate --
+# discord::callback::event::Channel --
 #
-#       Callback procedure for Dispatch Channel Create event.
+#       Callback procedure for Dispatch Channel events Create, Update, Delete.
 #
 # Arguments:
 #       event       Event name.
@@ -46,29 +49,61 @@ proc discord::callback::event::Ready { event data sessionNs } {
 #       sessionNs   Name of session namespace.
 #
 # Results:
-#       Update channel information in session guild.
+#       Modify session channel information.
 
-proc discord::callback::event::ChannelCreate { event data sessionNs } {
+proc discord::callback::event::Channel { event data sessionNs } {
     set log $::discord::log
-    puts "Channel Create: $data"
-    set isDM [expr {[dict get $data is_private] eq "true"}]
     set id [dict get $data id]
-    if {$isDM} {
-        dict set ${sessionNs}::dmChannels $id $data
+    set typeNames [dict create 0 Text 1 DM 2 Voice]
+    set type [dict get $data type]
+    if {![dict exists $typeNames $type} {
+        ${log}::warn "ChannelCreate: Unknown type '$type': $data"
+        return
+    }
+    set typeName [dict get $typeNames $type]
+    if {$typeName eq "DM"} {
+        switch $event {
+            CHANNEL_CREATE -
+            CHANNEL_UPDATE {
+                dict set ${sessionNs}::dmChannels $id $data
+            }
+            CHANNEL_DELETE {
+                dict unset ${sessionNs}::dmChannels $id
+            }
+            default {
+                ${log}::error "$typeName Channel: Invalid event: '$event'"
+                return
+            }
+        }
         set user [dict get $data recipient]
         foreach field {username discriminator} {
             set $field [dict get $user $field]
         }
-        ${log}::debug "DM Channel Created with ${username}#$discriminator"
+        ${log}::debug "$event $typeName: ${username}#$discriminator"
     } else {
         set guildId [dict get $data guild_id]
+        switch $event {
+            CHANNEL_CREATE -
+            CHANNEL_UPDATE {
+                dict set ${sessionNs}::guilds $guildId channels $id $data
+            }
+            CHANNEL_DELETE {
+                dict unset ${sessionNs}::guilds $guildId channels $id
+            }
+            default {
+                ${log}::error "$typeName Channel: Invalid event: '$event'"
+                return
+            }
+        }
+        set name [dict get $data name]
+        ${log}::debug "$event: '$name' ($id)"
     }
     return
 }
 
-# discord::callback::event::GuildCreate --
+# discord::callback::event::Guild --
 #
-#       Callback procedure for Dispatch Guild Create event.
+#       Callback procedure for Dispatch Guild events Create, Update, Delete.
 #
 # Arguments:
 #       event       Event name.
@@ -76,13 +111,30 @@ proc discord::callback::event::ChannelCreate { event data sessionNs } {
 #       sessionNs   Name of session namespace.
 #
 # Results:
-#       Update guild information in session guilds.
+#       Modify session guild information.
 
-proc discord::callback::event::GuildCreate { event data sessionNs } {
+proc discord::callback::event::Guild { event data sessionNs } {
     set log $::discord::log
     set id [dict get $data id]
-    dict set ${sessionNs}::guilds $id $data
+    switch $event {
+        GUILD_CREATE {
+            dict set ${sessionNs}::guilds $id $data
+        }
+        GUILD_UPDATE {
+            dict for {field value} $data {
+                dict set ${sessionNs}::guilds $id $field $value
+            }
+        }
+        GUILD_DELETE {
+            dict unset ${sessionNs}::guilds $id
+        }
+        default {
+            ${log}::error "Guild: Invalid event: '$event'"
+            return
+        }
+    }
+
     set name [dict get $data name]
-    ${log}::debug "Guild '$name' ($id) ready."
+    ${log}::debug "$event: '$name' ($id)"
     return
 }

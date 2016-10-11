@@ -216,8 +216,12 @@ proc discord::Every { interval script } {
 proc discord::SetupEventCallbacks { sock } {
     set ns ::discord::callback::event
     gateway::setCallback $sock READY ${ns}::Ready
-    gateway::setCallback $sock CHANNEL_CREATE ${ns}::ChannelCreate
-    gateway::setCallback $sock GUILD_CREATE ${ns}::GuildCreate
+    gateway::setCallback $sock CHANNEL_CREATE ${ns}::Channel
+    gateway::setCallback $sock CHANNEL_UPDATE ${ns}::Channel
+    gateway::setCallback $sock CHANNEL_DELETE ${ns}::Channel
+    gateway::setCallback $sock GUILD_CREATE ${ns}::Guild
+    gateway::setCallback $sock GUILD_UPDATE ${ns}::Guild
+    gateway::setCallback $sock GUILD_DELETE ${ns}::Guild
     return
 }
 
