@@ -1,4 +1,4 @@
-# discord.tcl 0.2.0
+# discord.tcl 0.2.1
 Discord API library writtten in Tcl.
 Tested with Tcl 8.5.
 Supports Discord Gateway API version 6.
@@ -7,7 +7,7 @@ Supports Discord Gateway API version 6.
 
 - Can only connect to the Gateway
 - Callbacks can be registered for all Dispatch events
-- Implemented event callbacks for: Ready, Guild Create
+- Implemented event callbacks for: Ready, Channel/Guild Create/Update/Delete.
 
 ### Libraries
 
