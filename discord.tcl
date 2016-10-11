@@ -56,13 +56,15 @@ proc discord::connect { token {shardInfo {0 1}} } {
     set id $SessionId
     incr SessionId
     set name ::discord::session::$id
-    set session [CreateSession $name $sock $token]
-    if {![gateway::bindSession $sock $session]} {
+    set sessionNs [CreateSession $name $sock $token]
+    if {![gateway::bindSession $sock $sessionNs]} {
         ${log}::error "connect: Failed to bind session to WebSocket '$sock'"
+        DeleteSession $sessionNs
         catch {gateway::disconnect $sock}
         return ""
+    } else {
+        return $sessionNs
     }
-    return $name
 }
 
 # discord::disconnect --
@@ -86,7 +88,7 @@ proc discord::disconnect { sessionNs } {
     if {[catch {gateway::disconnect [$sessionNs var sock]} res]} {
         ${log}::error "disconnect: $res"
     }
-    namespace delete $sessionNs
+    DeleteSession $sessionNs
     return 1
 }
 
@@ -134,7 +136,23 @@ proc discord::CreateSession { sessionNs sock token } {
     $sessionNs var self [dict create]
     $sessionNs var guilds [dict create]
     $sessionNs var dmChannels [dict create]
+    $sessionNs var log [::logger::init $sessionNs]
     return $sessionNs
+}
+
+# discord::DeleteSession --
+#
+#       Delete a session namespace
+#
+# Arguments:
+#       sessionNs   Name of fully-qualified namespace to delete.
+#
+# Results:
+#       None.
+
+proc discord::DeleteSession { sessionNs } {
+    [set ${sessionNs}::log]::delete
+    namespace delete $sessionNs
 }
 
 # discord::GetGateway --
