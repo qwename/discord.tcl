@@ -45,7 +45,7 @@ namespace eval discord::gateway {
         GUILD_DELETE                {}
         GUILD_BAN_ADD               {}
         GUILD_BAN_REMOVE            {}
-        GUILD_EMOJI_UPDATE          {}
+        GUILD_EMOJIS_UPDATE         {}
         GUILD_INTEGRATIONS_UPDATE   {}
         GUILD_MEMBER_REMOVE         {}
         GUILD_MEMBER_UPDATE         {}
