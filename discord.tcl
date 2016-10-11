@@ -240,6 +240,8 @@ proc discord::SetupEventCallbacks { sock } {
     gateway::setCallback $sock GUILD_CREATE ${ns}::Guild
     gateway::setCallback $sock GUILD_UPDATE ${ns}::Guild
     gateway::setCallback $sock GUILD_DELETE ${ns}::Guild
+    gateway::setCallback $sock GUILD_BAN_ADD ${ns}::GuildBan
+    gateway::setCallback $sock GUILD_BAN_REMOVE ${ns}::GuildBan
     return
 }
 
