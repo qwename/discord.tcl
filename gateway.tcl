@@ -50,7 +50,7 @@ namespace eval discord::gateway {
         GUILD_MEMBER_ADD            {}
         GUILD_MEMBER_REMOVE         {}
         GUILD_MEMBER_UPDATE         {}
-        GUILD_MEMBER_CHUNKS         {}
+        GUILD_MEMBERS_CHUNK         {}
         GUILD_ROLE_CREATE           {}
         GUILD_ROLE_UPDATE           {}
         GUILD_ROLE_DELETE           {}
