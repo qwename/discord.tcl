@@ -34,7 +34,7 @@ proc discord::callback::event::Ready { event data sessionNs } {
     }
     $sessionNs var sessionId [dict get $data session_id]
 
-    set log $::discord::log
+    set log [set ${sessionNs}::log]
     ${log}::debug "Ready"
     return
 }
@@ -52,11 +52,11 @@ proc discord::callback::event::Ready { event data sessionNs } {
 #       Modify session channel information.
 
 proc discord::callback::event::Channel { event data sessionNs } {
-    set log $::discord::log
+    set log [set ${sessionNs}::log]
     set id [dict get $data id]
     set typeNames [dict create 0 Text 1 DM 2 Voice]
     set type [dict get $data type]
-    if {![dict exists $typeNames $type} {
+    if {![dict exists $typeNames $type]} {
         ${log}::warn "ChannelCreate: Unknown type '$type': $data"
         return
     }
@@ -82,13 +82,33 @@ proc discord::callback::event::Channel { event data sessionNs } {
         ${log}::debug "$event $typeName: ${username}#$discriminator"
     } else {
         set guildId [dict get $data guild_id]
+        set channels [dict get [set ${sessionNs}::guilds] $guildId channels]
         switch $event {
-            CHANNEL_CREATE -
+            CHANNEL_CREATE {
+                lappend channels $data
+                dict set ${sessionNs}::guilds $guildId channels $channels
+            }
             CHANNEL_UPDATE {
-                dict set ${sessionNs}::guilds $guildId channels $id $data
+                set newChannels [list $data]
+                foreach channel $channels {
+                    if {$id == [dict get $channel id]} {
+                        continue
+                    } else {
+                        lappend newChannels $channel
+                    }
+                }
+                dict set ${sessionNs}::guilds $guildId channels $newChannels
             }
             CHANNEL_DELETE {
-                dict unset ${sessionNs}::guilds $guildId channels $id
+                set newChannels [list]
+                foreach channel $channels {
+                    if {$id == [dict get $channel id]} {
+                        continue
+                    } else {
+                        lappend newChannels $channel
+                    }
+                }
+                dict set ${sessionNs}::guilds $guildId channels $newChannels
             }
             default {
                 ${log}::error "$typeName Channel: Invalid event: '$event'"
@@ -96,7 +116,7 @@ proc discord::callback::event::Channel { event data sessionNs } {
             }
         }
         set name [dict get $data name]
-        ${log}::debug "$event: '$name' ($id)"
+        ${log}::debug "$typeName $event: '$name' ($id)"
     }
     return
 }
@@ -114,7 +134,7 @@ proc discord::callback::event::Channel { event data sessionNs } {
 #       Modify session guild information.
 
 proc discord::callback::event::Guild { event data sessionNs } {
-    set log $::discord::log
+    set log [set ${sessionNs}::log]
     set id [dict get $data id]
     switch $event {
         GUILD_CREATE {
@@ -136,5 +156,43 @@ proc discord::callback::event::Guild { event data sessionNs } {
 
     set name [dict get $data name]
     ${log}::debug "$event: '$name' ($id)"
+    return
+}
+
+# discord::callback::event::GuildBan --
+#
+#       Callback procedure for Dispatch Guild Ban events Add, Remove.
+#
+# Arguments:
+#       event       Event name.
+#       data        Dictionary representing a JSON object
+#       sessionNs   Name of session namespace.
+#
+# Results:
+#       None.
+
+proc discord::callback::event::GuildBan { event data sessionNs } {
+    set log [set ${sessionNs}::log]
+    set id [dict get $data id]
+    set guildId [dict get $data guild_id]
+    switch $event {
+
+        # GUILD_MEMBER_REMOVE follows GUILD_BAN_ADD, so no action is required
+        # here for both Add/Remove
+
+        GUILD_BAN_ADD -
+        GUILD_BAN_REMOVE {
+            set guildName [dict get [set ${sessionNs}::guilds] $guildId name]
+            foreach field {username discriminator} {
+                set $field [dict get $data $field]
+            }
+            ${log}::debug [join "$event '$guildName' ($guildId):" \
+                    "${username}#$discriminator ($id)"
+        }
+        default {
+            ${log}::error "GuildBan: Invalid event: '$event'"
+            return
+        }
+    }
     return
 }
