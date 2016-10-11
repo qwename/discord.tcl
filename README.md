@@ -71,4 +71,5 @@ Example output
 
 ### TODO
 
-- Implement Dispatch event callbacks in namespace discord
+- Implement all Gateway Dispatch event callbacks
+- Create test cases for most procedures.
