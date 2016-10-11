@@ -64,15 +64,10 @@ namespace eval discord::gateway {
         VOICE_SERVER_UPDATE         {}
     }
 
-    # Compression only used for Dispatch "READY" event. Set CompressEnabled to 1
-    # if you are able to get mkZiplib onto your system.
+    # Compression only used for Dispatch "READY" event. Set DefCompress to true
+    # before connecting if you are able to get mkZiplib onto your system.
 
-    variable CompressEnabled 0
     variable DefCompress false
-    if $CompressEnabled {
-        package require mkZiplib
-        set DefCompress true
-    }
 
     variable DefHeartbeatInterval 10000
     variable Sockets [dict create]
@@ -591,8 +586,9 @@ proc discord::gateway::MakeIdentify { sock args } {
     set token               [::json::write::string \
                                     [GetConnectionInfo $sock token]]
     set os                  [::json::write::string linux]
-    set browser             [::json::write::string "discord.tcl 0.1"]
-    set device              [::json::write::string "discord.tcl 0.1"]
+    set agent "discord.tcl $::discord::version"
+    set browser             [::json::write::string $agent]
+    set device              [::json::write::string $agent]
     set referrer            [::json::write::string ""]
     set referring_domain    [::json::write::string ""]
     set compress            [GetConnectionInfo $sock compress]
