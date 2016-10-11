@@ -347,12 +347,8 @@ proc discord::gateway::EventHandler { sock msg } {
     ${log}::debug "EventHandler: sock: '$sock' t: '$t' seq: $s"
     switch -glob -- $t {
         READY {
-            foreach field [dict keys $d] {
-                switch $field {
-                    default {
-                        SetConnectionInfo $sock $field [dict get $d $field]
-                    }
-                }
+            dict for {field value} $d {
+                SetConnectionInfo $sock $field $value
             }
 
             set interval [GetConnectionInfo $sock heartbeat_interval]
