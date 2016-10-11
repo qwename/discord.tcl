@@ -7,13 +7,16 @@ Supports Discord Gateway API version 6.
 
 - Can only connect to the Gateway
 - Callbacks can be registered for all Dispatch events
-- Implemented event callbacks for: Ready, Channel/Guild Create/Update/Delete.
+- Implemented event callbacks for: Ready, Channel/Guild Create/Update/Delete,
+    Guild Ban Add/Remove.
 
 ### Libraries
 
-- [Tcllib 1.18](http://www.tcl.tk/software/tcllib) (*websocket*, *json*, *json::write*, *logger*)
+- [Tcllib 1.18](http://www.tcl.tk/software/tcllib) (*websocket*, *json*,
+    *json::write*, *logger*)
 - [TLS 1.6.7](https://sourceforge.net/projects/tls) (*tls*)
-- [mkZiplib 1.0](http://mkextensions.sourceforge.net) (optional, for compression of Dispatch "READY" event)
+- [mkZiplib 1.0](http://mkextensions.sourceforge.net)
+    (optional, for compression of Dispatch "READY" event)
 
 ### Usage
 Use provided event handling and local state tracking.
