@@ -214,54 +214,10 @@ proc discord::Every { interval script } {
 #       None.
 
 proc discord::SetupEventCallbacks { sock } {
-    gateway::setCallback $sock READY ::discord::EventReady
-    gateway::setCallback $sock GUILD_CREATE ::discord::EventGuildCreate
-    return
-}
-
-# discord::EventReady --
-#
-#       Callback procedure for Dispatch Ready event. Get our user object, list
-#       of DM channels, guilds, and session_id.
-#
-# Arguments:
-#       event       Event name.
-#       data        Dictionary representing a JSON object
-#       sessionNs   Name of session namespace.
-#
-# Results:
-#       Updates variables in session namespace.
-
-proc discord::EventReady { event data sessionNs } {
-    $sessionNs var self [dict get $data user]
-    foreach guild [dict get $data guilds] {
-        $sessionNs var guilds [dict get $guild id] $guild
-    }
-    foreach dmChannel [dict get $data private_channels] {
-        $sessionNs var dmChannels [dict get $dmChannel id] $dmChannel
-    }
-    $sessionNs var sessionId [dict get $data session_id]
-    return
-}
-
-# discord::EventGuildCreate --
-#
-#       Callback procedure for Dispatch Guild Create event.
-#
-# Arguments:
-#       event       Event name.
-#       data        Dictionary representing a JSON object
-#       sessionNs   Name of session namespace.
-#
-# Results:
-#       Update guild information in session guilds.
-
-proc discord::EventGuildCreate { event data sessionNs } {
-    variable log
-    set id [dict get $data id]
-    dict set ${sessionNs}::guilds $id $data
-    set name [dict get $data name]
-    ${log}::debug "Guild '$name' ($id) ready."
+    set ns ::discord::callback::event
+    gateway::setCallback $sock READY ${ns}::Ready
+    gateway::setCallback $sock CHANNEL_CREATE ${ns}::ChannelCreate
+    gateway::setCallback $sock GUILD_CREATE ${ns}::GuildCreate
     return
 }
 

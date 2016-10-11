@@ -8,6 +8,8 @@
 # script is sourced, the variable $dir must contain the
 # full path name of this file's directory.
 
-package ifneeded discord 0.2.0 \
-    "source [file join $dir gateway.tcl] ;
-     source [file join $dir discord.tcl] ;"
+package ifneeded discord 0.2.0 "
+    source [file join $dir callback.tcl] ;
+    source [file join $dir gateway.tcl] ;
+    source [file join $dir discord.tcl] ;
+"
