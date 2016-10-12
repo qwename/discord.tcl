@@ -187,6 +187,7 @@ proc discord::gateway::setCallback { sock event cmd } {
     variable log
     set eventCallbacks [GetConnectionInfo $sock eventCallbacks]
     if {![dict exists $eventCallbacks $event]} {
+        ${log}::debug "Event not recognized: '$event'"
         return 0
     } else {
         dict set eventCallbacks $event $cmd
