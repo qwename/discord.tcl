@@ -19,7 +19,7 @@ package require logger
 ::http::register https 443 ::tls::socket
 
 namespace eval discord::gateway {
-    namespace export connect disconnect setCallback logWsMsg
+    namespace export connect disconnect setCallback setDefaultCallback logWsMsg
     namespace ensemble create
 
     variable log [::logger::init discord::gateway]
@@ -135,6 +135,8 @@ proc discord::gateway::connect { token {cmd {}} {shardInfo {0 1}} } {
     }
     SetConnectionInfo $sock connectCallback $cmd
     SetConnectionInfo $sock eventCallbacks [dict get $EventCallbacks]
+    SetConnectionInfo $sock defEventCallback \
+            ::discord::gateway::EventCallbackStub
     SetConnectionInfo $sock sendCount 0
     SetConnectionInfo $sock shard $shardInfo
     SetConnectionInfo $sock seq null
@@ -172,14 +174,12 @@ proc discord::gateway::disconnect { sock } {
 #       Register a callback procedure for a specified Dispatch event. The
 #       callback is invoked after the event is handled by EventHandler; it
 #       will accept two required arguments, 'event' and 'data', and an optional
-#       argument 'cmd'. Refer to discord::gateway::DefEventCallback for an
+#       argument 'cmd'. Refer to discord::gateway::EventCallbackStub for an
 #       example.
 #
 # Arguments:
 #       sock    WebSocket object.
 #       event   Event name.
-#       cmd     Fully-qualified name of the callback command. Set this to the
-#               empty string to unregister the callback for an event.
 #       cmd     (optional) list that includes a callback procedure, and any
 #               arguments to be passed to the callback. The last two arguments
 #               passed will be the event name, and a dictionary representing a
@@ -201,6 +201,31 @@ proc discord::gateway::setCallback { sock event cmd } {
         ${log}::debug "Registered callback for event '$event': $cmd"
         return 1
     }
+}
+
+# discord::gateway::setDefaultCallback --
+#
+#       Register a default callback procedure for Dispatch events. The
+#       callback is invoked after the event is handled by EventHandler; it
+#       will accept two required arguments, 'event' and 'data', and an optional
+#       argument 'cmd'. Refer to discord::gateway::EventCallbackStub for an
+#       example.
+#
+# Arguments:
+#       sock    WebSocket object.
+#       cmd     (optional) list that includes a callback procedure, and any
+#               arguments to be passed to the callback. The last two arguments
+#               passed will be the event name, and a dictionary representing a
+#               JSON object. The callback is invoked at the end of EventHandler.
+#               Set this to the empty string to unregister a callback.
+#
+# Results:
+#       Returns 1 if the event is supported, 0 otherwise.
+
+proc discord::gateway::setDefaultCallback { sock cmd } {
+    variable log
+    SetConnectionInfo $sock defEventCallback $cmd
+    ${log}::debug "Registered default event callback: $cmd"
 }
 
 # discord::gateway::logWsMsg --
@@ -351,9 +376,9 @@ proc discord::gateway::EventHandler { sock msg } {
         set res {}
     }
     if {$res eq {}} {
-        after idle [list ::discord::gateway::DefEventCallback $t $d]
+        after idle [list {*}[GetConnectionInfo $sock defEventCallback] $t $d]
     } else {
-        after idle [list [lindex $res 0] {*}[lindex $res 1] $t $d]
+        after idle [list {*}$res $t $d]
     }
     return 1
 }
@@ -653,7 +678,7 @@ proc discord::gateway::MakeResume { sock } {
             seq [GetConnectionInfo $sock seq]]
 }
 
-# discord::gateway::DefEventCallback --
+# discord::gateway::EventCallbackStub --
 #
 #       Stub for Dispatch events.
 #
@@ -664,6 +689,6 @@ proc discord::gateway::MakeResume { sock } {
 # Results:
 #       None.
 
-proc discord::gateway::DefEventCallback { event data } {
+proc discord::gateway::EventCallbackStub { event data } {
     return
 }
