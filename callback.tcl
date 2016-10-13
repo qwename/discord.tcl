@@ -17,14 +17,14 @@ namespace eval discord::callback::event { }
 #       of DM channels, guilds, and session_id.
 #
 # Arguments:
+#       sessionNs   Name of session namespace.
 #       event       Event name.
 #       data        Dictionary representing a JSON object
-#       sessionNs   Name of session namespace.
 #
 # Results:
 #       Updates variables in session namespace.
 
-proc discord::callback::event::Ready { event data sessionNs } {
+proc discord::callback::event::Ready { sessionNs event data } {
     $sessionNs var self [dict get $data user]
     foreach guild [dict get $data guilds] {
         $sessionNs var guilds [dict get $guild id] $guild
@@ -44,14 +44,14 @@ proc discord::callback::event::Ready { event data sessionNs } {
 #       Callback procedure for Dispatch Channel events Create, Update, Delete.
 #
 # Arguments:
+#       sessionNs   Name of session namespace.
 #       event       Event name.
 #       data        Dictionary representing a JSON object
-#       sessionNs   Name of session namespace.
 #
 # Results:
 #       Modify session channel information.
 
-proc discord::callback::event::Channel { event data sessionNs } {
+proc discord::callback::event::Channel { sessionNs event data } {
     set log [set ${sessionNs}::log]
     set id [dict get $data id]
     set typeNames [dict create 0 Text 1 DM 2 Voice]
@@ -127,14 +127,14 @@ proc discord::callback::event::Channel { event data sessionNs } {
 #       Callback procedure for Dispatch Guild events Create, Update, Delete.
 #
 # Arguments:
+#       sessionNs   Name of session namespace.
 #       event       Event name.
 #       data        Dictionary representing a JSON object
-#       sessionNs   Name of session namespace.
 #
 # Results:
 #       Modify session guild information.
 
-proc discord::callback::event::Guild { event data sessionNs } {
+proc discord::callback::event::Guild { sessionNs event data } {
     set log [set ${sessionNs}::log]
     set id [dict get $data id]
     switch $event {
@@ -165,14 +165,14 @@ proc discord::callback::event::Guild { event data sessionNs } {
 #       Callback procedure for Dispatch Guild Ban events Add, Remove.
 #
 # Arguments:
+#       sessionNs   Name of session namespace.
 #       event       Event name.
 #       data        Dictionary representing a JSON object
-#       sessionNs   Name of session namespace.
 #
 # Results:
 #       None.
 
-proc discord::callback::event::GuildBan { event data sessionNs } {
+proc discord::callback::event::GuildBan { sessionNs event data } {
     set log [set ${sessionNs}::log]
     set id [dict get $data id]
     set guildId [dict get $data guild_id]
@@ -203,14 +203,14 @@ proc discord::callback::event::GuildBan { event data sessionNs } {
 #       Callback procedure for Dispatch Guild Member events Add, Remove, Update.
 #
 # Arguments:
+#       sessionNs   Name of session namespace.
 #       event       Event name.
 #       data        Dictionary representing a JSON object
-#       sessionNs   Name of session namespace.
 #
 # Results:
 #       Modify session guild information.
 
-proc discord::callback::event::GuildMember { event data sessionNs } {
+proc discord::callback::event::GuildMember { sessionNs event data } {
     set log [set ${sessionNs}::log]
     set user [dict get $data user]
     set id [dict get $user id]
@@ -264,14 +264,14 @@ proc discord::callback::event::GuildMember { event data sessionNs } {
 #       Delete.
 #
 # Arguments:
+#       sessionNs   Name of session namespace.
 #       event       Event name.
 #       data        Dictionary representing a JSON object
-#       sessionNs   Name of session namespace.
 #
 # Results:
 #       Modify session guild information.
 
-proc discord::callback::event::GuildRole { event data sessionNs } {
+proc discord::callback::event::GuildRole { sessionNs event data } {
     set log [set ${sessionNs}::log]
     set role [dict get $data role]
     foreach field {id name} {
