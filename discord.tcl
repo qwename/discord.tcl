@@ -63,6 +63,7 @@ proc discord::connect { token {shardInfo {0 1}} } {
     $sessionNs var self [dict create]
     $sessionNs var guilds [dict create]
     $sessionNs var dmChannels [dict create]
+    $sessionNs var users [dict create]
     $sessionNs var log [::logger::init $sessionNs]
     return $sessionNs
 }
@@ -238,6 +239,7 @@ proc discord::SetupEventCallbacks { sessionNs sock } {
         GUILD_MEMBER_ADD    GuildMember
         GUILD_MEMBER_REMOVE GuildMember
         GUILD_MEMBER_UPDATE GuildMember
+        GUILD_MEMBER_CHUNK  GuildMemberChunk
         GUILD_ROLE_CREATE   GuildRole
         GUILD_ROLE_UPDATE   GuildRole
         GUILD_ROLE_DELETE   GuildRole
