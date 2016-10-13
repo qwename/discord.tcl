@@ -19,7 +19,7 @@ package require logger
 ::http::register https 443 ::tls::socket
 
 namespace eval discord::gateway {
-    namespace export connect disconnect setCallback bindSession logWsMsg
+    namespace export connect disconnect setCallback logWsMsg
     namespace ensemble create
 
     variable log [::logger::init discord::gateway]
@@ -102,10 +102,12 @@ namespace eval discord::gateway {
 #
 # Arguments:
 #       token       Bot token or OAuth2 bearer token.
-#       cmd         (optional) fully-qualified name of a callback procedure that
-#                   is invoked before the Identify message is sent. Accepts one
-#                   argument 'sock', which can be used to register Dispatch
-#                   event callbacks using discord::gateway::eventCallbacks.
+#       cmd         (optional) list that includes a callback procedure, and any
+#                   arguments to be passed to the callback. The last argument
+#                   passed will be a WebSocket object, which can be used to
+#                   register Dispatch event callbacks using
+#                   discord::gateway::eventCallbacks. The callback is invoked
+#                   before the Identify message is sent.
 #       shardInfo   (optional) list with two elements, the shard ID and number
 #                   of shards. Defaults to {0 1}, meaning shard ID 0 and 1 shard
 #                   in total.
@@ -140,7 +142,6 @@ proc discord::gateway::connect { token {cmd {}} {shardInfo {0 1}} } {
     SetConnectionInfo $sock session_id null
     SetConnectionInfo $sock heartbeat_interval $DefHeartbeatInterval
     SetConnectionInfo $sock compress $DefCompress
-    SetConnectionInfo $sock session ""
     return $sock
 }
 
@@ -171,7 +172,7 @@ proc discord::gateway::disconnect { sock } {
 #       Register a callback procedure for a specified Dispatch event. The
 #       callback is invoked after the event is handled by EventHandler; it
 #       will accept two required arguments, 'event' and 'data', and an optional
-#       argument 'session'. Refer to discord::gateway::DefEventCallback for an
+#       argument 'cmd'. Refer to discord::gateway::DefEventCallback for an
 #       example.
 #
 # Arguments:
@@ -179,6 +180,11 @@ proc discord::gateway::disconnect { sock } {
 #       event   Event name.
 #       cmd     Fully-qualified name of the callback command. Set this to the
 #               empty string to unregister the callback for an event.
+#       cmd     (optional) list that includes a callback procedure, and any
+#               arguments to be passed to the callback. The last two arguments
+#               passed will be the event name, and a dictionary representing a
+#               JSON object. The callback is invoked at the end of EventHandler.
+#               Set this to the empty string to unregister a callback.
 #
 # Results:
 #       Returns 1 if the event is supported, 0 otherwise.
@@ -193,27 +199,6 @@ proc discord::gateway::setCallback { sock event cmd } {
         dict set eventCallbacks $event $cmd
         SetConnectionInfo $sock eventCallbacks $eventCallbacks
         ${log}::debug "Registered callback for event '$event': $cmd"
-        return 1
-    }
-}
-
-# discord::gateway::bindSession --
-#
-#       Set the session namespace that a WebSocket object belongs to.
-#
-# Arguments:
-#       sock        WebSocket object.
-#       sessionNs   Session namespace returned by discord::connect
-#
-# Results:
-#       Returns 1 if successful, and 0 otherwise.
-
-proc discord::gateway::bindSession { sock sessionNs } {
-    variable log
-    if {[catch {SetConnectionInfo $sock session $sessionNs} res]} {
-        ${log}::error "bindSession: $res"
-        return 0
-    } else {
         return 1
     }
 }
@@ -361,17 +346,15 @@ proc discord::gateway::EventHandler { sock msg } {
         }
     }
     set eventCallbacks [GetConnectionInfo $sock eventCallbacks]
-    set callback {}
-    set knownEvent [dict exists $eventCallbacks $t]
-    if {$knownEvent} {
-        set callback [dict get $eventCallbacks $t]
+    if {[catch {dict get $eventCallbacks $t} res]} {
+        ${log}::warn "EventHandler: Unknown Event: $res"
+        set res {}
+    }
+    if {$res eq {}} {
+        after idle [list ::discord::gateway::DefEventCallback $t $d]
     } else {
-        ${log}::warn "EventHandler: Unknown Event: $t"
+        after idle [list [lindex $res 0] {*}[lindex $res 1] $t $d]
     }
-    if {$callback == {}} {
-        set callback discord::gateway::DefEventCallback
-    }
-    after idle [list ::$callback $t $d [GetConnectionInfo $sock session]]
     return 1
 }
 
@@ -481,9 +464,9 @@ proc discord::gateway::Handler { sock type msg } {
             }
         }
         connect {
-            set callback [GetConnectionInfo $sock connectCallback]
-            if {$callback != {}} {
-                ::$callback $sock
+            set cmd [GetConnectionInfo $sock connectCallback]
+            if {[llength $cmd] > 0} {
+                ::[lindex $cmd 0] {*}[lrange $cmd 1 end] $sock
             }
             after idle [list discord::gateway::Send $sock Identify]
             ${log}::notice "Handler: Connected."
@@ -675,13 +658,12 @@ proc discord::gateway::MakeResume { sock } {
 #       Stub for Dispatch events.
 #
 # Arguments:
-#       event       Event name.
-#       data        Dictionary representing a JSON object
-#       sessionNs   (option) name of session namespace.
+#       event   Event name.
+#       data    Dictionary representing a JSON object
 #
 # Results:
 #       None.
 
-proc discord::gateway::DefEventCallback { event data {sessionNs ""} } {
+proc discord::gateway::DefEventCallback { event data } {
     return
 }
