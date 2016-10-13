@@ -75,7 +75,7 @@ proc discord::callback::event::Channel { sessionNs event data } {
                 return
             }
         }
-        set user [dict get $data recipient]
+        set user [dict get $data recipients]
         set userId [dict get $user id]
         foreach field {username discriminator} {
             set $field [dict get $user $field]
