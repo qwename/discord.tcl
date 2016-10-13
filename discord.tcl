@@ -17,7 +17,7 @@ namespace eval discord {
     namespace export connect disconnect
     namespace ensemble create
 
-    variable version 0.2.1
+    variable version 0.3.0
 
     variable log [::logger::init discord]
     ${log}::setlevel debug
@@ -49,22 +49,22 @@ namespace eval discord {
 proc discord::connect { token {shardInfo {0 1}} } {
     variable log
     variable SessionId
-    set sock [gateway::connect $token ::discord::SetupEventCallbacks $shardInfo]
-    if {$sock eq ""} {
-        return ""
-    }
     set id $SessionId
     incr SessionId
     set name ::discord::session::$id
-    set sessionNs [CreateSession $name $sock $token]
-    if {![gateway::bindSession $sock $sessionNs]} {
-        ${log}::error "connect: Failed to bind session to WebSocket '$sock'"
-        DeleteSession $sessionNs
-        catch {gateway::disconnect $sock}
+    set sessionNs [CreateSession $name]
+    set sock [gateway::connect $token \
+            [list ::discord::SetupEventCallbacks $sessionNs] $shardInfo]
+    if {$sock eq ""} {
         return ""
-    } else {
-        return $sessionNs
     }
+    $sessionNs var sock $sock
+    $sessionNs var token $token
+    $sessionNs var self [dict create]
+    $sessionNs var guilds [dict create]
+    $sessionNs var dmChannels [dict create]
+    $sessionNs var log [::logger::init $sessionNs]
+    return $sessionNs
 }
 
 # discord::disconnect --
@@ -98,14 +98,11 @@ proc discord::disconnect { sessionNs } {
 #
 # Arguments:
 #       sessionNs   Name of fully-qualified namespace to create.
-#       sock        WebSocket object.
-#       token       Bot token or OAuth2 bearer token.
 #
 # Results:
-#       Creates a namespace with the variables sock and token present. Also
-#       defines the procedure 'variable'. Returns the namespace name.
+#       Creates a namespace specific to a session. Returns the namespace name.
 
-proc discord::CreateSession { sessionNs sock token } {
+proc discord::CreateSession { sessionNs } {
     namespace eval $sessionNs {
         namespace export variable
         namespace ensemble create
@@ -131,12 +128,6 @@ proc discord::CreateSession { sessionNs sock token } {
             return [set $name]
         }
     }
-    $sessionNs var sock $sock
-    $sessionNs var token $token
-    $sessionNs var self [dict create]
-    $sessionNs var guilds [dict create]
-    $sessionNs var dmChannels [dict create]
-    $sessionNs var log [::logger::init $sessionNs]
     return $sessionNs
 }
 
@@ -226,28 +217,35 @@ proc discord::Every { interval script } {
 #       sent.
 #
 # Arguments:
-#       sock    WebSocket object.
+#       sessionNs   Name of a session namespace.
+#       sock        WebSocket object.
 #
 # Results:
 #       None.
 
-proc discord::SetupEventCallbacks { sock } {
-    set ns ::discord::callback::event
-    gateway::setCallback $sock READY ${ns}::Ready
-    gateway::setCallback $sock CHANNEL_CREATE ${ns}::Channel
-    gateway::setCallback $sock CHANNEL_UPDATE ${ns}::Channel
-    gateway::setCallback $sock CHANNEL_DELETE ${ns}::Channel
-    gateway::setCallback $sock GUILD_CREATE ${ns}::Guild
-    gateway::setCallback $sock GUILD_UPDATE ${ns}::Guild
-    gateway::setCallback $sock GUILD_DELETE ${ns}::Guild
-    gateway::setCallback $sock GUILD_BAN_ADD ${ns}::GuildBan
-    gateway::setCallback $sock GUILD_BAN_REMOVE ${ns}::GuildBan
-    gateway::setCallback $sock GUILD_MEMBER_ADD ${ns}::GuildMember
-    gateway::setCallback $sock GUILD_MEMBER_REMOVE ${ns}::GuildMember
-    gateway::setCallback $sock GUILD_MEMBER_UPDATE ${ns}::GuildMember
-    gateway::setCallback $sock GUILD_ROLE_CREATE ${ns}::GuildRole
-    gateway::setCallback $sock GUILD_ROLE_UPDATE ${ns}::GuildRole
-    gateway::setCallback $sock GUILD_ROLE_DELETE ${ns}::GuildRole
+proc discord::SetupEventCallbacks { sessionNs sock } {
+    set eventToProc {
+        READY               Ready
+        CHANNEL_CREATE      Channel
+        CHANNEL_CREATE      Channel
+        CHANNEL_UPDATE      Channel
+        CHANNEL_DELETE      Channel
+        GUILD_CREATE        Guild
+        GUILD_UPDATE        Guild
+        GUILD_DELETE        Guild
+        GUILD_BAN_ADD       GuildBan
+        GUILD_BAN_REMOVE    GuildBan
+        GUILD_MEMBER_ADD    GuildMember
+        GUILD_MEMBER_REMOVE GuildMember
+        GUILD_MEMBER_UPDATE GuildMember
+        GUILD_ROLE_CREATE   GuildRole
+        GUILD_ROLE_UPDATE   GuildRole
+        GUILD_ROLE_DELETE   GuildRole
+    }
+    dict for {event proc} $eventToProc {
+        gateway::setCallback $sock $event \
+                [list ::discord::callback::event::$proc $sessionNs]
+    }
     return
 }
 
