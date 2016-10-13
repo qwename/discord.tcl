@@ -1,4 +1,4 @@
-# discord.tcl 0.2.1
+# discord.tcl 0.3.0
 Discord API library writtten in Tcl.
 Tested with Tcl 8.5.
 Supports Discord Gateway API version 6.
