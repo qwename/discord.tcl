@@ -58,7 +58,7 @@ proc discord::callback::event::Channel { sessionNs event data } {
     set type [dict get $data type]
     if {![dict exists $typeNames $type]} {
         ${log}::warn "ChannelCreate: Unknown type '$type': $data"
-        return
+        return 0
     }
     set typeName [dict get $typeNames $type]
     if {$typeName eq "DM"} {
@@ -69,10 +69,6 @@ proc discord::callback::event::Channel { sessionNs event data } {
             }
             CHANNEL_DELETE {
                 dict unset ${sessionNs}::dmChannels $id
-            }
-            default {
-                ${log}::error "$typeName Channel: Invalid event: '$event'"
-                return
             }
         }
         set user [dict get $data recipients]
@@ -111,10 +107,6 @@ proc discord::callback::event::Channel { sessionNs event data } {
                 }
                 dict set ${sessionNs}::guilds $guildId channels $newChannels
             }
-            default {
-                ${log}::error "$typeName Channel: Invalid event: '$event'"
-                return
-            }
         }
         set name [dict get $data name]
         ${log}::debug "$typeName $event: '$name' ($id)"
@@ -148,10 +140,6 @@ proc discord::callback::event::Guild { sessionNs event data } {
         }
         GUILD_DELETE {
             dict unset ${sessionNs}::guilds $id
-        }
-        default {
-            ${log}::error "Guild: Invalid event: '$event'"
-            return
         }
     }
 
@@ -189,10 +177,6 @@ proc discord::callback::event::GuildBan { sessionNs event data } {
             }
             ${log}::debug [join "$event '$guildName' ($guildId):" \
                     "${username}#$discriminator ($id)"
-        }
-        default {
-            ${log}::error "GuildBan: Invalid event: '$event'"
-            return
         }
     }
     return
@@ -244,10 +228,6 @@ proc discord::callback::event::GuildMember { sessionNs event data } {
             }
             dict set ${sessionNs}::guilds $guildId members $newMembers
         }
-        default {
-            ${log}::error "GuildMember: Invalid event: '$event'"
-            return
-        }
     }
     set guildName [dict get [set ${sessionNs}::guilds] $guildId name]
     foreach field {username discriminator} {
@@ -255,6 +235,25 @@ proc discord::callback::event::GuildMember { sessionNs event data } {
     }
     ${log}::debug [join "$event '$guildName' ($guildId):" \
             "${username}#$discriminator ($id)"]
+    return
+}
+
+# discord::callback::event::GuildMemberChunk -
+#
+#       Callback procedure for Dispatch event Guild Members Chunk.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       event       Event name.
+#       data        Dictionary representing a JSON object
+#
+# Results:
+#       Modify session guild information.
+
+proc discord::callback::event::GuildMemberChunk { sessionNs event data } {
+    set guildId [dict get $data guild_id]
+    foreach member [dict get $data members] {
+    }
     return
 }
 
@@ -305,10 +304,6 @@ proc discord::callback::event::GuildRole { sessionNs event data } {
                 }
             }
             dict set ${sessionNs}::guilds $guildId roles $newRoles
-        }
-        default {
-            ${log}::error "GuildMember: Invalid event: '$event'"
-            return
         }
     }
     set guildName [dict get [set ${sessionNs}::guilds] $guildId name]
