@@ -254,7 +254,7 @@ proc discord::callback::event::GuildMember { sessionNs event data } {
         set $field [dict get $user $field]
     }
     ${log}::debug [join "$event '$guildName' ($guildId):" \
-            "${username}#$discriminator ($id)"
+            "${username}#$discriminator ($id)"]
     return
 }
 
