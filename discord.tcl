@@ -226,23 +226,29 @@ proc discord::Every { interval script } {
 
 proc discord::SetupEventCallbacks { sessionNs sock } {
     set eventToProc {
-        READY               Ready
-        CHANNEL_CREATE      Channel
-        CHANNEL_CREATE      Channel
-        CHANNEL_UPDATE      Channel
-        CHANNEL_DELETE      Channel
-        GUILD_CREATE        Guild
-        GUILD_UPDATE        Guild
-        GUILD_DELETE        Guild
-        GUILD_BAN_ADD       GuildBan
-        GUILD_BAN_REMOVE    GuildBan
-        GUILD_MEMBER_ADD    GuildMember
-        GUILD_MEMBER_REMOVE GuildMember
-        GUILD_MEMBER_UPDATE GuildMember
-        GUILD_MEMBER_CHUNK  GuildMemberChunk
-        GUILD_ROLE_CREATE   GuildRole
-        GUILD_ROLE_UPDATE   GuildRole
-        GUILD_ROLE_DELETE   GuildRole
+        READY                       Ready
+        CHANNEL_CREATE              Channel
+        CHANNEL_CREATE              Channel
+        CHANNEL_UPDATE              Channel
+        CHANNEL_DELETE              Channel
+        GUILD_CREATE                Guild
+        GUILD_UPDATE                Guild
+        GUILD_DELETE                Guild
+        GUILD_BAN_ADD               GuildBan
+        GUILD_BAN_REMOVE            GuildBan
+        GUILD_EMOJIS_UPDATE         GuildEmojisUpdate
+        GUILD_INTEGRATIONS_UPDATE   GuildIntegrationsUpdate
+        GUILD_MEMBER_ADD            GuildMember
+        GUILD_MEMBER_REMOVE         GuildMember
+        GUILD_MEMBER_UPDATE         GuildMember
+        GUILD_MEMBER_CHUNK          GuildMemberChunk
+        GUILD_ROLE_CREATE           GuildRole
+        GUILD_ROLE_UPDATE           GuildRole
+        GUILD_ROLE_DELETE           GuildRole
+        MESSAGE_ROLE_CREATE         Message
+        MESSAGE_ROLE_UPDATE         Message
+        MESSAGE_ROLE_DELETE         Message
+        MESSAGE_DELETE_BULK         MessageDeleteBulk
     }
     dict for {event proc} $eventToProc {
         gateway::setCallback $sock $event \

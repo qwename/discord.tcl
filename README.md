@@ -7,9 +7,8 @@ Supports Discord Gateway API version 6.
 
 - Can only connect to the Gateway
 - Callbacks can be registered for all Dispatch events
-- Implemented event callbacks for: Ready, Channel/Guild Create/Update/Delete,
-    Guild Ban Add/Remove, Guild Member Add/Remove/Update,
-    Guild Role Create/Update/Delete.
+- Event callbacks not implemented: Presence Update, Typing Start,
+  User Settings Update, User Update, Voice State Update, Voice Server Update.
 
 ### Libraries
 

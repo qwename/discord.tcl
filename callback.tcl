@@ -182,6 +182,46 @@ proc discord::callback::event::GuildBan { sessionNs event data } {
     return
 }
 
+# discord::callback::event::GuildEmojisUpdate --
+#
+#       Callback procedure for Dispatch event Guild Emojis Update.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       event       Event name.
+#       data        Dictionary representing a JSON object
+#
+# Results:
+#       Modify session guild information.
+
+proc discord::callback::event::GuildEmojisUpdate { sessionNs event data } {
+    set log [set ${sessionNs}::log]
+    set guildId [dict get $data guild_id]
+    dict set ${sessionNs}::guilds $guildId emojis [dict get $data emojis]
+    set guildName [dict get [set ${sessionNs}::guilds] $guildId name]
+    ${log}::debug "$event: '$guildName' ($guildId)"
+}
+
+# discord::callback::event::GuildIntegrationsUpdate --
+#
+#       Callback procedure for Dispatch event Guild Emojis Update.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       event       Event name.
+#       data        Dictionary representing a JSON object
+#
+# Results:
+#       Modify session guild information.
+
+proc discord::callback::event::GuildIntegrationsUpdate { sessionNs event data }
+        {
+    set log [set ${sessionNs}::log]
+    set guildId [dict get $data guild_id]
+    set guildName [dict get [set ${sessionNs}::guilds] $guildId name]
+    ${log}::debug "$event: '$guildName' ($guildId)"
+}
+
 # discord::callback::event::GuildMember --
 #
 #       Callback procedure for Dispatch Guild Member events Add, Remove, Update.
@@ -251,9 +291,13 @@ proc discord::callback::event::GuildMember { sessionNs event data } {
 #       Modify session guild information.
 
 proc discord::callback::event::GuildMemberChunk { sessionNs event data } {
+    set log [set ${sessionNs}::log]
     set guildId [dict get $data guild_id]
-    foreach member [dict get $data members] {
-    }
+    set members [dict get $data members]
+    set guildName [dict get [set ${sessionNs}::guilds] $guildId name]
+    ${log}::debug [join \
+            "$event: Received [llength $members] offline members in" \
+            "'$guildName' ($guildId)"]
     return
 }
 
@@ -308,5 +352,58 @@ proc discord::callback::event::GuildRole { sessionNs event data } {
     }
     set guildName [dict get [set ${sessionNs}::guilds] $guildId name]
     ${log}::debug "$event '$guildName' ($guildId): '$name' ($id)"
+    return
+}
+
+# discord::callback::event::Message --
+#
+#       Callback procedure for Dispatch Message events Create, Update, Delete.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       event       Event name.
+#       data        Dictionary representing a JSON object
+#
+# Results:
+#       Log message information.
+
+proc discord::callback::event::Message { sessionNs event data } {
+    set log [set ${sessionNs}::log]
+    set id [dict get $data id]
+    set channelId [dict get $data channel_id]
+    switch $event {
+        MESSAGE_CREATE {
+            set timestamp [dict get $data timestamp]
+            set author [dict get $data author]
+            set username [dict get $author username]
+            set discriminator [dict get $author discriminator]
+            set content [dict get $data content]
+            ${log}::debug "$timestamp ${username}#${discriminator}: $content"
+        }
+        MESSAGE_UPDATE - {
+        MESSAGE_DELETE {
+            ${log}::debug "$event: $data"
+        }
+    }
+    return
+}
+
+# discord::callback::event::MessageDeleteBulk --
+#
+#       Callback procedure for Dispatch event Message Delete Bulk.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       event       Event name.
+#       data        Dictionary representing a JSON object
+#
+# Results:
+#       Log information.
+
+proc discord::callback::event::MessageDeleteBulk { sessionNs event data } {
+    set log [set ${sessionNs}::log]
+    set ids [dict get $data ids]
+    set channelId [dict get $data channel_id]
+    ${log}::debug "$event: [llength $ids] messages deleted from $channelId."
     return
 }
