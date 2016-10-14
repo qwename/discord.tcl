@@ -49,13 +49,17 @@ proc discord::rest::Send { token verb resource {data {}} {cmd {}} {timeout 0}
 
     set body [list]
     dict for {field value} $data {
-        
+        lappend body $field $value
     }
-    set url "${ApiBaseUrl}/${resource}"
-    if {[catch [list ::http::geturl $url \
+    set url "${ApiBaseUrlV6}/${resource}"
+    set command [list ::http::geturl $url \
             -headers [list Authorization "Bot $token"] \
             -method $verb \
-            -timeout $timeout] res]} {
+            -timeout $timeout]
+    if {[llength $body] > 0} {
+        lappend command -query [::http::formatQuery {*}$body]
+    }
+    if {[catch $command res]} {
         ${log}::error "Send: $res"
         return 0
     }
