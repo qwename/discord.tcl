@@ -214,8 +214,8 @@ proc discord::callback::event::GuildEmojisUpdate { sessionNs event data } {
 # Results:
 #       Modify session guild information.
 
-proc discord::callback::event::GuildIntegrationsUpdate { sessionNs event data }
-        {
+proc discord::callback::event::GuildIntegrationsUpdate { sessionNs event data
+        } {
     set log [set ${sessionNs}::log]
     set guildId [dict get $data guild_id]
     set guildName [dict get [set ${sessionNs}::guilds] $guildId name]
@@ -380,7 +380,7 @@ proc discord::callback::event::Message { sessionNs event data } {
             set content [dict get $data content]
             ${log}::debug "$timestamp ${username}#${discriminator}: $content"
         }
-        MESSAGE_UPDATE - {
+        MESSAGE_UPDATE -
         MESSAGE_DELETE {
             ${log}::debug "$event: $data"
         }
