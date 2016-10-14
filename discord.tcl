@@ -19,7 +19,7 @@ namespace eval discord {
     namespace export connect disconnect
     namespace ensemble create
 
-    variable version 0.3.1
+    variable version 0.3.2
 
     variable log [::logger::init discord]
     ${log}::setlevel debug

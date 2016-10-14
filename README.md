@@ -1,6 +1,6 @@
-# discord.tcl 0.3.1
+# discord.tcl 0.3.2
 Discord API library writtten in Tcl.
-Tested with Tcl 8.5.
+Tested with Tcl 8.5 (moving to 8.6).
 Supports Discord Gateway API version 6.
 
 ### Status
@@ -9,6 +9,7 @@ Supports Discord Gateway API version 6.
 - Callbacks can be registered for all Dispatch events
 - Event callbacks not implemented: Presence Update, Typing Start,
   User Settings Update, User Update, Voice State Update, Voice Server Update.
+- Internal HTTP request procedure ready.
 
 ### Libraries
 
