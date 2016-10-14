@@ -1,6 +1,6 @@
 # discord.tcl --
 #
-#       This file implements the Tcl code for interacting with the Discord API
+#       This file implements the Tcl code for interacting with the Discord API.
 #
 # Copyright (c) 2016, Yixin Zhang
 #
@@ -9,9 +9,11 @@
 
 package require Tcl 8.5
 package require http
+package require tls
 package require json
 package require logger
 
+::http::register https 443 ::tls::socket
 
 namespace eval discord {
     namespace export connect disconnect
@@ -23,6 +25,7 @@ namespace eval discord {
     ${log}::setlevel debug
 
     variable ApiBaseUrl "https://discordapp.com/api"
+    variable ApiBaseUrlV6 "https://discordapp.com/api/v6"
     variable GatewayUrl ""
 
     variable SessionId 0
@@ -161,12 +164,12 @@ proc discord::DeleteSession { sessionNs } {
 
 proc discord::GetGateway { {cached 1} } {
     variable log
-    variable ApiBaseUrl
+    variable ApiBaseUrlV6
     variable GatewayUrl
     if {$GatewayUrl ne "" && $cached} {
         return $GatewayUrl
     }
-    set reqUrl "${ApiBaseUrl}/gateway"
+    set reqUrl "${ApiBaseUrlV6}/gateway"
     if {[catch {::http::geturl $reqUrl} token]} {
         ${log}::error "GetGateway: $reqUrl: $token"
         return ""
