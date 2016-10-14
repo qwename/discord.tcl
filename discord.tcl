@@ -231,7 +231,6 @@ proc discord::SetupEventCallbacks { sessionNs sock } {
     set eventToProc {
         READY                       Ready
         CHANNEL_CREATE              Channel
-        CHANNEL_CREATE              Channel
         CHANNEL_UPDATE              Channel
         CHANNEL_DELETE              Channel
         GUILD_CREATE                Guild
@@ -244,7 +243,7 @@ proc discord::SetupEventCallbacks { sessionNs sock } {
         GUILD_MEMBER_ADD            GuildMember
         GUILD_MEMBER_REMOVE         GuildMember
         GUILD_MEMBER_UPDATE         GuildMember
-        GUILD_MEMBER_CHUNK          GuildMemberChunk
+        GUILD_MEMBERS_CHUNK         GuildMembersChunk
         GUILD_ROLE_CREATE           GuildRole
         GUILD_ROLE_UPDATE           GuildRole
         GUILD_ROLE_DELETE           GuildRole

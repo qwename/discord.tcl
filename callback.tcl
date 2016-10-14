@@ -283,7 +283,7 @@ proc discord::callback::event::GuildMember { sessionNs event data } {
     return
 }
 
-# discord::callback::event::GuildMemberChunk -
+# discord::callback::event::GuildMembersChunk -
 #
 #       Callback procedure for Dispatch event Guild Members Chunk.
 #
@@ -295,7 +295,7 @@ proc discord::callback::event::GuildMember { sessionNs event data } {
 # Results:
 #       Modify session guild information.
 
-proc discord::callback::event::GuildMemberChunk { sessionNs event data } {
+proc discord::callback::event::GuildMembersChunk { sessionNs event data } {
     set log [set ${sessionNs}::log]
     set guildId [dict get $data guild_id]
     set members [dict get $data members]
