@@ -68,15 +68,20 @@ proc discord::callback::event::Channel { sessionNs event data } {
                 dict set ${sessionNs}::dmChannels $id $data
             }
             CHANNEL_DELETE {
-                dict unset ${sessionNs}::dmChannels $id
+                if {[dict exists ${sessionNs}::dmChannels $id]} {
+                    dict unset ${sessionNs}::dmChannels $id
+                }
             }
         }
-        set user [dict get $data recipients]
-        set userId [dict get $user id]
-        foreach field {username discriminator} {
-            set $field [dict get $user $field]
+        set users [dict get $data recipients]
+        ${log}::debug "$typeName $event:"
+        foreach user $users {
+            set userId [dict get $user id]
+            foreach field {username discriminator} {
+                set $field [dict get $user $field]
+            }
+            ${log}::debug "${username}#$discriminator ($userId)"
         }
-        ${log}::debug "$typeName $event: ${username}#$discriminator ($userId)"
     } else {
         set guildId [dict get $data guild_id]
         set channels [dict get [set ${sessionNs}::guilds] $guildId channels]
