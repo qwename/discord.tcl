@@ -150,7 +150,7 @@ proc discord::callback::event::Guild { sessionNs event data } {
                 }
             }
             foreach presence [dict get $data presences] {
-                PresenceUpdate $sessionNs $event $presence
+                PresenceUpdate $sessionNs "${event}_PresenceUpdate" $presence
             }
         }
         GUILD_UPDATE {
