@@ -224,9 +224,9 @@ proc discord::SetupEventCallbacks { sessionNs sock } {
         GUILD_ROLE_CREATE           GuildRole
         GUILD_ROLE_UPDATE           GuildRole
         GUILD_ROLE_DELETE           GuildRole
-        MESSAGE_ROLE_CREATE         Message
-        MESSAGE_ROLE_UPDATE         Message
-        MESSAGE_ROLE_DELETE         Message
+        MESSAGE_CREATE              Message
+        MESSAGE_UPDATE              Message
+        MESSAGE_DELETE              Message
         MESSAGE_DELETE_BULK         MessageDeleteBulk
         PRESENCE_UPDATE             PresenceUpdate
         USER_UPDATE                 UserUpdate
