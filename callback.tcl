@@ -25,14 +25,14 @@ namespace eval discord::callback::event { }
 #       Updates variables in session namespace.
 
 proc discord::callback::event::Ready { sessionNs event data } {
-    $sessionNs var self [dict get $data user]
+    set ${sessionNs}::self [dict get $data user]
     foreach guild [dict get $data guilds] {
-        $sessionNs var guilds [dict get $guild id] $guild
+        dict set ${sessionNs}::guilds [dict get $guild id] $guild
     }
     foreach dmChannel [dict get $data private_channels] {
-        $sessionNs var dmChannels [dict get $dmChannel id] $dmChannel
+        dict set ${sessionNs}::dmChannels [dict get $dmChannel id] $dmChannel
     }
-    $sessionNs var sessionId [dict get $data session_id]
+    set ${sessionNs}::sessionId [dict get $data session_id]
 
     set log [set ${sessionNs}::log]
     ${log}::debug "Ready"
@@ -137,6 +137,16 @@ proc discord::callback::event::Guild { sessionNs event data } {
     switch $event {
         GUILD_CREATE {
             dict set ${sessionNs}::guilds $id $data
+            foreach member [dict get $data members] {
+                set user [dict get $member user]
+                set userId [dict get $user id]
+                dict for {field value} $user {
+                    dict set ${sessionNs}::users $userId $field $value
+                }
+            }
+            foreach presence [dict get $data presences] {
+                PresenceUpdate $sessionNs $event $presence
+            }
         }
         GUILD_UPDATE {
             dict for {field value} $data {
@@ -411,4 +421,52 @@ proc discord::callback::event::MessageDeleteBulk { sessionNs event data } {
     set channelId [dict get $data channel_id]
     ${log}::debug "$event: [llength $ids] messages deleted from $channelId."
     return
+}
+
+# discord::callback::event::PresenceUpdate --
+#
+#       Callback procedure for Dispatch event Presence Update
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       event       Event name.
+#       data        Dictionary representing a JSON object.
+#
+# Results:
+#       Modify session user and guild information.
+
+proc discord::callback::event::PresenceUpdate { sessionNs event data } {
+    set log [set ${sessionNs}::log]
+    set user [dict get $data user]
+    set userId [dict get $user id]
+    dict for {field value} $user {
+        dict set ${sessionNs}::users $userId $field $value
+    }
+    set userFields [list game status]
+    foreach field $userFields {
+        catch {
+            set value [dict get $data field]
+            dict set ${sessionNs}::users $userId $field $value
+        }
+    }
+    if {[dict exists $data guild_id]} {
+        set guildId [dict get $data guild_id]
+        set newMembers [list]
+        set members [dict get [set ${sessionNs}::guilds] $guildId members]
+        foreach member $members {
+            set memberUser [dict get $member user]
+            set memberUserId [dict get $memberUser id]
+            if {$memberUserId eq $userId} {
+                foreach field [list roles nick] {
+                    catch {
+                        set value [dict get $data $field]
+                        dict set member $field $value
+                    }
+                }
+            }
+            lappend newMembers $member
+        }
+        dict set ${sessionNs}::guilds $guildId members $newMembers
+    }
+    ${log}::debug "$event: $userId"
 }
