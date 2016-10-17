@@ -6,9 +6,10 @@ Supports Discord Gateway API version 6.
 ### Status
 
 - Can only connect to the Gateway
+- Tracks users, guilds, DM channels
 - Callbacks can be registered for all Dispatch events
-- Event callbacks not implemented: Presence Update, Typing Start,
-  User Settings Update, User Update, Voice State Update, Voice Server Update.
+- Event callbacks not implemented: Typing Start, User Settings Update,
+  Voice State Update, Voice Server Update.
 - Internal HTTP request procedure ready.
 
 ### Libraries
@@ -77,3 +78,5 @@ Example output
 
 - Implement all Gateway Dispatch event callbacks
 - Create test cases for most procedures.
+- Use *zlib* package from Tcl 8.6 instead of mkZiplib
+- Local message cache using sqlite3/tdbc::sqlite3/tdbc::postgres package
