@@ -1,6 +1,6 @@
 # discord.tcl 0.3.2
 Discord API library writtten in Tcl.
-Tested with Tcl 8.5 (moving to 8.6).
+Tested with Tcl 8.6.
 Supports Discord Gateway API version 6.
 
 ### Status
@@ -78,5 +78,5 @@ Example output
 
 - Implement all Gateway Dispatch event callbacks
 - Create test cases for most procedures.
-- Use *zlib* package from Tcl 8.6 instead of mkZiplib
-- Local message cache using sqlite3/tdbc::sqlite3/tdbc::postgres package
+- Find out why *zlib inflate* fails.
+- Local message cache using sqlite3/tdbc::sqlite3/tdbc::postgres package.

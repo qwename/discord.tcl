@@ -7,7 +7,7 @@
 # See the file "LICENSE" for information on usage and redistribution of this
 # file.
 
-package require Tcl 8.5
+package require Tcl 8.6
 package require http
 package require tls
 package require json

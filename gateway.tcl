@@ -8,13 +8,14 @@
 # See the file "LICENSE" for information on usage and redistribution of this
 # file.
 
-package require Tcl 8.5
+package require Tcl 8.6
 package require http
 package require tls
 package require websocket
 package require json
 package require json::write
 package require logger
+package require zlib
 
 ::http::register https 443 ::tls::socket
 
@@ -67,7 +68,7 @@ namespace eval discord::gateway {
     }
 
     # Compression only used for Dispatch "READY" event. Set DefCompress to true
-    # before connecting if you are able to get mkZiplib onto your system.
+    # before connecting. zlib inflate doesn't work right now.
 
     variable DefCompress false
 
@@ -481,10 +482,10 @@ proc discord::gateway::Handler { sock type msg } {
             after idle [list discord::gateway::TextHandler $sock $msg]
         }
         binary {
-            if {![catch {::inflate $msg} res]} {
+            if {![catch {::zlib inflate $msg} res]} {
                 after idle [list discord::gateway::TextHandler $sock $res]
             } else {
-                set bytes [string length $res]
+                set bytes [string length $msg]
                 ${log}::warn "Handler: $bytes bytes of binary data."
             }
         }

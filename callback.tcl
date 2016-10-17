@@ -7,7 +7,7 @@
 # See the file "LICENSE" for information on usage and redistribution of this
 # file.
 
-package require Tcl 8.5
+package require Tcl 8.6
 
 namespace eval discord::callback::event { }
 
