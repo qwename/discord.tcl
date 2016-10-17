@@ -61,13 +61,13 @@ proc discord::connect { token {shardInfo {0 1}} } {
     if {$sock eq ""} {
         return ""
     }
-    $sessionNs var sock $sock
-    $sessionNs var token $token
-    $sessionNs var self [dict create]
-    $sessionNs var guilds [dict create]
-    $sessionNs var dmChannels [dict create]
-    $sessionNs var users [dict create]
-    $sessionNs var log [::logger::init $sessionNs]
+    set ${sessionNs}::sock $sock
+    set ${sessionNs}::token $token
+    set ${sessionNs}::self [dict create]
+    set ${sessionNs}::guilds [dict create]
+    set ${sessionNs}::dmChannels [dict create]
+    set ${sessionNs}::users [dict create]
+    set ${sessionNs}::log [::logger::init $sessionNs]
     return $sessionNs
 }
 
@@ -89,7 +89,7 @@ proc discord::disconnect { sessionNs } {
         return 0
     }
 
-    if {[catch {gateway::disconnect [$sessionNs var sock]} res]} {
+    if {[catch {gateway::disconnect [set ${sessionNs}::sock]} res]} {
         ${log}::error "disconnect: $res"
     }
     DeleteSession $sessionNs
@@ -108,29 +108,6 @@ proc discord::disconnect { sessionNs } {
 
 proc discord::CreateSession { sessionNs } {
     namespace eval $sessionNs {
-        namespace export variable
-        namespace ensemble create
-
-        # ${sessionNs}::variable --
-        #
-        #       Get or set a variable in the $sessionNs namespace.
-        #
-        # Arguments:
-        #       name    Name of the variable.
-        #       args    (optional) value to set the variable to.
-        #
-        # Results:
-        #       If 'args' is specified, set 'name' to its value. If not
-        #       return the value of 'name'. An error will occur if the variable
-        #       does not exist and no value is specified.
-
-        proc variable { name args } {
-            ::variable $name
-            if {[llength $args] > 0} {
-                set $name $args
-            }
-            return [set $name]
-        }
     }
     return $sessionNs
 }
@@ -251,6 +228,7 @@ proc discord::SetupEventCallbacks { sessionNs sock } {
         MESSAGE_ROLE_UPDATE         Message
         MESSAGE_ROLE_DELETE         Message
         MESSAGE_DELETE_BULK         MessageDeleteBulk
+        PRESENCE_UPDATE             PresenceUpdate
     }
     dict for {event proc} $eventToProc {
         gateway::setCallback $sock $event \
