@@ -25,7 +25,7 @@ namespace eval discord::rest {
 
 # discord::rest::GetChannel --
 #
-#       Get a channel by ID. Returns a Guild channel or DM channel dictionary.
+#       Get a channel by ID.
 #
 # Arguments:
 #       token       Bot token or OAuth2 bearer token.
@@ -34,10 +34,29 @@ namespace eval discord::rest {
 #                   received.
 #
 # Results:
-#       None.
+#       Passes a Guild or DM channel dictionary to the callback.
 
 proc discord::rest::GetChannel { token channelId {cmd {}} } {
     discord::rest::Send $token GET "/channels/$channelId" {} $cmd
+}
+
+# discord::rest::ModifyChannel --
+#
+#       Update a channel's settings.
+#
+# Arguments:
+#       token       Bot token or OAuth2 bearer token.
+#       channelId   Channel ID.
+#       data        Dictionary representing a JSON object. Each is one of
+#                   name, position, topic, bitrate, user_limit.
+#       cmd         (optional) callback procedure invoked after a response is
+#                   received.
+#
+# Results:
+#       Passes a Guild channel dictionary to the callback.
+
+proc discord::rest::ModifyChannel { token channelId data {cmd {}} } {
+    discord::rest::Send $token PATCH "/channels/$channelId" $data $cmd
 }
 
 # discord::rest::Send --
@@ -50,8 +69,9 @@ proc discord::rest::GetChannel { token channelId {cmd {}} } {
 #       resource    Path relative to the base URL, prefixed with '/'.
 #       data        (optional) dictionary of parameters and values to include.
 #       cmd         (optional) list containing a callback procedure, and
-#                   additional arguments to be passed to it. The last argument
-#                   will be the data returned.
+#                   additional arguments to be passed to it. The last two
+#                   arguments will be a data dictionary, and the HTTP code or
+#                   error.
 #       timeout     (optional) timeout for HTTP request in milliseconds.
 #                   Defaults to 0, which means no timeout.
 #
@@ -111,23 +131,30 @@ proc discord::rest::SendCallback { sendId token } {
     set url [dict get $SendInfo $sendId url]
     set cmd [dict get $SendInfo $sendId cmd]
     set status [::http::status $token]
-    ${log}::debug "SendCallback${sendId}: $url: $status"
     switch $status {
-        error -
-        timeout -
-        reset {
-            if {[llength $cmd] > 0} {
-                after idle [list {*}$cmd {}]
-            }
-        }
         ok {
+            set code [::http::code $token]
+            ${log}::debug "SendCallback${sendId}: $url: $status ($code)"
             set cmd [dict get $SendInfo $sendId cmd]
             if {[llength $cmd] > 0} {
                 if {[catch {json::json2dict [::http::data $token]} data]} {
-                    ${log}::error "SendCallback: $url: $data"
-                    return
+                    ${log}::error "SendCallback${sendId}: $url: $data"
+                    set data {}
                 }
-                after idle [list {*}$cmd $data]
+                after idle [list {*}$cmd $data $code]
+            }
+        }
+        error {
+            set error [::http::error $token]
+            ${log}::error "SendCallback${sendId}: $url: $status ($error)"
+            if {[llength $cmd] > 0} {
+                after idle [list {*}$cmd {} [::http::error $token]]
+            }
+        }
+        default {
+            ${log}::error "SendCallback${sendId}: $url: $status"
+            if {[llength $cmd] > 0} {
+                after idle [list {*}$cmd {} $status]
             }
         }
     }
