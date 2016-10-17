@@ -63,9 +63,13 @@ proc discord::callback::event::Channel { sessionNs event data } {
     set typeName [dict get $typeNames $type]
     if {$typeName eq "DM"} {
         switch $event {
-            CHANNEL_CREATE -
-            CHANNEL_UPDATE {
+            CHANNEL_CREATE {
                 dict set ${sessionNs}::dmChannels $id $data
+            }
+            CHANNEL_UPDATE {
+                dict for {field value} $data {
+                    dict set ${sessionNs}::dmChannels $id $field $value
+                }
             }
             CHANNEL_DELETE {
                 if {[dict exists ${sessionNs}::dmChannels $id]} {
@@ -91,13 +95,14 @@ proc discord::callback::event::Channel { sessionNs event data } {
                 dict set ${sessionNs}::guilds $guildId channels $channels
             }
             CHANNEL_UPDATE {
-                set newChannels [list $data]
+                set newChannels [list]
                 foreach channel $channels {
                     if {$id == [dict get $channel id]} {
-                        continue
-                    } else {
-                        lappend newChannels $channel
+                        dict for {field value} $data {
+                            dict set channel $field $value
+                        }
                     }
+                    lappend newChannels $channel
                 }
                 dict set ${sessionNs}::guilds $guildId channels $newChannels
             }
@@ -343,13 +348,14 @@ proc discord::callback::event::GuildRole { sessionNs event data } {
             dict set ${sessionNs}::guilds $guildId roles $roles
         }
         GUILD_ROLE_UPDATE {
-            set newRoles [list $role]
+            set newRoles [list]
             foreach r $roles {
                 if {$id == [dict get $r id]} {
-                    continue
-                } else {
-                    lappend newRoles $r
+                    dict for {field value} $role {
+                        dict set r $field $value
+                    }
                 }
+                lappend newRoles $r
             }
             dict set ${sessionNs}::guilds $guildId roles $newRoles
         }
@@ -469,4 +475,28 @@ proc discord::callback::event::PresenceUpdate { sessionNs event data } {
         dict set ${sessionNs}::guilds $guildId members $newMembers
     }
     ${log}::debug "$event: $userId"
+}
+
+# discord::callback::event::UserUpdate --
+#
+#       Callback procedure for Dispatch event User Update
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       event       Event name.
+#       data        Dictionary representing a JSON object.
+#
+# Results:
+#       Modify session user information.
+
+proc discord::callback::event::UserUpdate { sessionNs event data } {
+    set log [set ${sessionNs}::log]
+    set id [dict get $data id]
+    dict for {field value} $data {
+        dict set ${sessionNs}::users $id $field $value
+    }
+    foreach field [list username discriminator] {
+        set $field [dict get [set ${sessionNs}::users] $id $field]
+    }
+    ${log}::debug "$event: ${username}#${discriminator} ($id)"
 }

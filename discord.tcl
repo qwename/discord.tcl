@@ -229,6 +229,7 @@ proc discord::SetupEventCallbacks { sessionNs sock } {
         MESSAGE_ROLE_DELETE         Message
         MESSAGE_DELETE_BULK         MessageDeleteBulk
         PRESENCE_UPDATE             PresenceUpdate
+        USER_UPDATE                 UserUpdate
     }
     dict for {event proc} $eventToProc {
         gateway::setCallback $sock $event \
