@@ -121,6 +121,7 @@ proc discord::rest::SendCallback { sendId token } {
             }
         }
         ok {
+            set cmd [dict get $SendInfo $sendId cmd]
             if {[llength $cmd] > 0} {
                 if {[catch {json::json2dict [::http::data $token]} data]} {
                     ${log}::error "SendCallback: $url: $data"
