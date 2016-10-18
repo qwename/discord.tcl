@@ -10,7 +10,8 @@ Supports Discord Gateway API version 6.
 - Callbacks can be registered for all Dispatch events
 - Event callbacks not implemented: Typing Start, User Settings Update,
   Voice State Update, Voice Server Update.
-- HTTP requests supported: Get Channel, Modify Channel.
+- HTTP requests supported: Get Channel, Modify Channel, Delete Channel,
+  Get Channel Message(s), Create Message.
 
 ### Libraries
 

@@ -47,8 +47,9 @@ proc discord::rest::GetChannel { token channelId {cmd {}} } {
 # Arguments:
 #       token       Bot token or OAuth2 bearer token.
 #       channelId   Channel ID.
-#       data        Dictionary representing a JSON object. Each is one of
-#                   name, position, topic, bitrate, user_limit.
+#       data        Dictionary representing a JSON object. Each key is one of
+#                   name, position, topic, bitrate, user_limit. All the keys
+#                   are optional.
 #       cmd         (optional) callback procedure invoked after a response is
 #                   received.
 #
@@ -57,6 +58,82 @@ proc discord::rest::GetChannel { token channelId {cmd {}} } {
 
 proc discord::rest::ModifyChannel { token channelId data {cmd {}} } {
     discord::rest::Send $token PATCH "/channels/$channelId" $data $cmd
+}
+
+# discord::rest::DeleteChannel --
+#
+#       Delete a Guild channel, or close a DM channel.
+#
+# Arguments:
+#       token       Bot token or OAuth2 bearer token.
+#       channelId   Channel ID.
+#       cmd         (optional) callback procedure invoked after a response is
+#                   received.
+#
+# Results:
+#       Passes a Guild or DM channel dictionary to the callback.
+
+proc discord::rest::DeleteChannel { token channelId {cmd {}} } {
+    discord::rest::Send $token DELETE "/channels/$channelId" {} $cmd
+}
+
+# discord::rest::GetChannelMessages --
+#
+#       Returns the messages for a channel.
+#
+# Arguments:
+#       token       Bot token or OAuth2 bearer token.
+#       channelId   Channel ID.
+#       data        Dictionary representing a JSON object. Each key is one of
+#                   limit, around/before/after. Limit defaults to 50 if not
+#                   specified. All the keys are optional.
+#                   name, position, topic, bitrate, user_limit.
+#       cmd         (optional) callback procedure invoked after a response is
+#                   received.
+#
+# Results:
+#       Passes a list of message dictionaries to the callback.
+
+proc discord::rest::GetChannelMessages { token channelId data {cmd {}} } {
+    discord::rest::Send $token GET "/channels/$channelId/messages" $data $cmd
+}
+
+# discord::rest::GetChannelMessage --
+#
+#       Returns a specific message in the channel.
+#
+# Arguments:
+#       token       Bot token or OAuth2 bearer token.
+#       channelId   Channel ID.
+#       messageId   Message ID.
+#       cmd         (optional) callback procedure invoked after a response is
+#                   received.
+#
+# Results:
+#       Passes a message dictionary to the callback.
+
+proc discord::rest::GetChannelMessage { token channelId messageId {cmd {}} } {
+    discord::rest::Send $token GET "/channels/$channelId/messages/$messageId" \
+            {} $cmd
+}
+
+# discord::rest::CreateMessage --
+#
+#       Post a message to a guild text or DM channel.
+#
+# Arguments:
+#       token       Bot token or OAuth2 bearer token.
+#       channelId   Channel ID.
+#       data        Dictionary representing a JSON object. Each key is one of
+#                   content, nonce, tts. Only content is required.
+#       cmd         (optional) callback procedure invoked after a response is
+#                   received.
+#
+# Results:
+#       Passes a message dictionary to the callback.
+
+proc discord::rest::CreateMessage { token channelId data {cmd {}} } {
+    discord::rest::Send $token POST "/channels/$channelId/messages" $data $cmd
 }
 
 # discord::rest::Send --
