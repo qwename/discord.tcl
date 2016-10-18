@@ -21,6 +21,8 @@ namespace eval discord::rest {
 
     variable SendId 0
     variable SendInfo [dict create]
+
+    variable RateLimits [dict create]
 }
 
 # discord::rest::GetChannel --
@@ -160,11 +162,25 @@ proc discord::rest::Send { token verb resource {data {}} {cmd {}} {timeout 0}
     variable log
     variable SendId
     variable SendInfo
+    variable RateLimits
     global discord::ApiBaseUrlV6
+
+    if {[dict exists $RateLimits $token X-RateLimit-Remaining]} {
+        set remaining [dict get $RateLimits $token X-RateLimit-Remaining]
+        if {$remaining <= 0} {
+            set resetTime [dict get $RateLimits $token X-RateLimit-Reset]
+            set secsRemain [expr {$resetTime - [clock seconds]}]
+            if {$secsRemain >= 0} {
+                ${log}::warn "Send: Rate-limited, reset in $secsRemain seconds"
+                return
+            }
+        }
+    }
     if {$verb ni [list GET POST PUT PATCH DELETE]} {
         ${log}::error "Send: HTTP method not recognized: '$verb'"
         return 0
     }
+
     set sendId $SendId
     incr SendId
     set callbackName ::discord::rest::SendCallback${sendId}
@@ -175,7 +191,7 @@ proc discord::rest::Send { token verb resource {data {}} {cmd {}} {timeout 0}
         lappend body $field $value
     }
     set url "${ApiBaseUrlV6}${resource}"
-    dict set SendInfo $sendId [dict create cmd $cmd url $url]
+    dict set SendInfo $sendId [dict create cmd $cmd url $url token $token]
     set command [list ::http::geturl $url \
             -headers [list Authorization "Bot $token"] \
             -method $verb \
@@ -204,12 +220,21 @@ proc discord::rest::Send { token verb resource {data {}} {cmd {}} {timeout 0}
 proc discord::rest::SendCallback { sendId token } {
     variable log
     variable SendInfo
+    variable RateLimits
     interp alias {} ::discord::rest::SendCallback${sendId} {}
     set url [dict get $SendInfo $sendId url]
     set cmd [dict get $SendInfo $sendId cmd]
+    set discordToken [dict get $SendInfo $sendId token]
     set status [::http::status $token]
     switch $status {
         ok {
+            array set meta [::http::meta $token]
+            foreach header [list X-RateLimit-Limit X-RateLimit-Remaining \
+                    X-RateLimit-Reset] {
+                if {[info exists meta($header)]} {
+                    dict set RateLimits $discordToken $header $meta($header)
+                }
+            }
             set code [::http::code $token]
             ${log}::debug "SendCallback${sendId}: $url: $status ($code)"
             set cmd [dict get $SendInfo $sendId cmd]
