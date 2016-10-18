@@ -440,7 +440,12 @@ proc discord::rest::SendCallback { sendId token } {
                 }
             }
             set code [::http::code $token]
-            ${log}::debug "SendCallback${sendId}: $url: $status ($code)"
+            set ncode [::http::ncode $token]
+            if {$ncode >= 300} {
+                ${log}::warn "SendCallback${sendId}: $url: $status ($code)"
+            } else {
+                ${log}::debug "SendCallback${sendId}: $url: $status ($code)"
+            }
             set cmd [dict get $SendInfo $sendId cmd]
             if {[llength $cmd] > 0} {
                 if {[catch {json::json2dict [::http::data $token]} data]} {
