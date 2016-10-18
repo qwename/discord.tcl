@@ -194,7 +194,7 @@ proc discord::gateway::setCallback { sock event cmd } {
     variable log
     set eventCallbacks [GetConnectionInfo $sock eventCallbacks]
     if {![dict exists $eventCallbacks $event]} {
-        ${log}::debug "Event not recognized: '$event'"
+        ${log}::error "Event not recognized: '$event'"
         return 0
     } else {
         dict set eventCallbacks $event $cmd
@@ -373,7 +373,7 @@ proc discord::gateway::EventHandler { sock msg } {
     }
     set eventCallbacks [GetConnectionInfo $sock eventCallbacks]
     if {[catch {dict get $eventCallbacks $t} res]} {
-        ${log}::warn "EventHandler: Unknown Event: $res"
+        ${log}::warn "EventHandler: Unknown Event: $t"
         set res {}
     }
     if {$res eq {}} {
