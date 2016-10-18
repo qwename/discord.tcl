@@ -16,7 +16,7 @@ package require logger
 ::http::register https 443 ::tls::socket
 
 namespace eval discord {
-    namespace export connect disconnect
+    namespace export connect disconnect setCallback
     namespace ensemble create
 
     variable version 0.3.2
@@ -30,6 +30,59 @@ namespace eval discord {
 
     variable SessionId 0
     variable Sessions [dict create]
+
+    variable DefCallbacks {
+        READY                       {}
+        CHANNEL_CREATE              {}
+        CHANNEL_UPDATE              {}
+        CHANNEL_DELETE              {}
+        GUILD_CREATE                {}
+        GUILD_UPDATE                {}
+        GUILD_DELETE                {}
+        GUILD_BAN_ADD               {}
+        GUILD_BAN_REMOVE            {}
+        GUILD_EMOJIS_UPDATE         {}
+        GUILD_INTEGRATIONS_UPDATE   {}
+        GUILD_MEMBER_ADD            {}
+        GUILD_MEMBER_REMOVE         {}
+        GUILD_MEMBER_UPDATE         {}
+        GUILD_MEMBERS_CHUNK         {}
+        GUILD_ROLE_CREATE           {}
+        GUILD_ROLE_UPDATE           {}
+        GUILD_ROLE_DELETE           {}
+        MESSAGE_CREATE              {}
+        MESSAGE_UPDATE              {}
+        MESSAGE_DELETE              {}
+        MESSAGE_DELETE_BULK         {}
+        PRESENCE_UPDATE             {}
+        USER_UPDATE                 {}
+    }
+    set EventToProc {
+        READY                       Ready
+        CHANNEL_CREATE              Channel
+        CHANNEL_UPDATE              Channel
+        CHANNEL_DELETE              Channel
+        GUILD_CREATE                Guild
+        GUILD_UPDATE                Guild
+        GUILD_DELETE                Guild
+        GUILD_BAN_ADD               GuildBan
+        GUILD_BAN_REMOVE            GuildBan
+        GUILD_EMOJIS_UPDATE         GuildEmojisUpdate
+        GUILD_INTEGRATIONS_UPDATE   GuildIntegrationsUpdate
+        GUILD_MEMBER_ADD            GuildMember
+        GUILD_MEMBER_REMOVE         GuildMember
+        GUILD_MEMBER_UPDATE         GuildMember
+        GUILD_MEMBERS_CHUNK         GuildMembersChunk
+        GUILD_ROLE_CREATE           GuildRole
+        GUILD_ROLE_UPDATE           GuildRole
+        GUILD_ROLE_DELETE           GuildRole
+        MESSAGE_CREATE              Message
+        MESSAGE_UPDATE              Message
+        MESSAGE_DELETE              Message
+        MESSAGE_DELETE_BULK         MessageDeleteBulk
+        PRESENCE_UPDATE             PresenceUpdate
+        USER_UPDATE                 UserUpdate
+    }
 }
 
 ::http::config -useragent "DiscordBot (discord.tcl, ${::discord::version})"
@@ -52,6 +105,7 @@ namespace eval discord {
 proc discord::connect { token {shardInfo {0 1}} } {
     variable log
     variable SessionId
+    variable DefCallbacks
     set id $SessionId
     incr SessionId
     set name ::discord::session::$id
@@ -68,6 +122,7 @@ proc discord::connect { token {shardInfo {0 1}} } {
     set ${sessionNs}::dmChannels [dict create]
     set ${sessionNs}::users [dict create]
     set ${sessionNs}::log [::logger::init $sessionNs]
+    set ${sessionNs}::callbacks $DefCallbacks
     return $sessionNs
 }
 
@@ -94,6 +149,35 @@ proc discord::disconnect { sessionNs } {
     }
     DeleteSession $sessionNs
     return 1
+}
+
+# discord::setCallback --
+#
+#       Register a callback procedure for a specified Dispatch event. The
+#       callback is invoked after the event is handled by the library callback;
+#       it will accept three arguments, 'sessionNs', 'event' and 'data'. Refer
+#       to callback.tcl for examples.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       event       Event name.
+#       cmd         (optional) list that includes a callback procedure, and any
+#                   arguments to be passed to the callback. Set this to the
+#                   empty string to unregister a callback.
+#
+# Results:
+#       Returns 1 if the event is supported, 0 otherwise.
+
+proc discord::setCallback { sessionNs event cmd } {
+    variable log
+    if {![dict exists [set ${sessionNs}::callbacks] $event]} {
+        ${log}::error "Event not recognized: '$event'"
+        return 0
+    } else {
+        dict set ${sessionNs}::callbacks $event $cmd
+        ${log}::debug "Registered callback for event '$event': $cmd"
+        return 1
+    }
 }
 
 # discord::CreateSession --
@@ -205,35 +289,33 @@ proc discord::Every { interval script } {
 #       None.
 
 proc discord::SetupEventCallbacks { sessionNs sock } {
-    set eventToProc {
-        READY                       Ready
-        CHANNEL_CREATE              Channel
-        CHANNEL_UPDATE              Channel
-        CHANNEL_DELETE              Channel
-        GUILD_CREATE                Guild
-        GUILD_UPDATE                Guild
-        GUILD_DELETE                Guild
-        GUILD_BAN_ADD               GuildBan
-        GUILD_BAN_REMOVE            GuildBan
-        GUILD_EMOJIS_UPDATE         GuildEmojisUpdate
-        GUILD_INTEGRATIONS_UPDATE   GuildIntegrationsUpdate
-        GUILD_MEMBER_ADD            GuildMember
-        GUILD_MEMBER_REMOVE         GuildMember
-        GUILD_MEMBER_UPDATE         GuildMember
-        GUILD_MEMBERS_CHUNK         GuildMembersChunk
-        GUILD_ROLE_CREATE           GuildRole
-        GUILD_ROLE_UPDATE           GuildRole
-        GUILD_ROLE_DELETE           GuildRole
-        MESSAGE_CREATE              Message
-        MESSAGE_UPDATE              Message
-        MESSAGE_DELETE              Message
-        MESSAGE_DELETE_BULK         MessageDeleteBulk
-        PRESENCE_UPDATE             PresenceUpdate
-        USER_UPDATE                 UserUpdate
-    }
-    dict for {event proc} $eventToProc {
+    dict for {event callback} [set ${sessionNs}::callbacks] {
         gateway::setCallback $sock $event \
-                [list ::discord::callback::event::$proc $sessionNs]
+                [list ::discord::ManageEvents $callback $sessionNs]
+    }
+    return
+}
+
+# discord::ManageEvents --
+#
+#       Invokes internal library callback and user-defined callback if any.
+#
+# Arguments:
+#       callback    User-defined callback procedure to invoke after procName.
+#       sessionNs   Name of session namespace.
+#       event       Event name.
+#       data        Dictionary representing a JSON object
+#
+# Results:
+#       None.
+
+proc discord::ManageEvents { callback sessionNs event data } {
+    variable EventToProc
+    if {![catch {dict get $EventToProc $event} procName]} { 
+        callback::event::$procName $sessionNs $event $data
+    }
+    if {$callback ne {}} {
+        $callback $sessionNs $event $data
     }
     return
 }
