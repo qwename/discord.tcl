@@ -1,4 +1,4 @@
-# discord.tcl 0.3.2
+# discord.tcl 0.4.0
 Discord API library writtten in Tcl.
 Tested with Tcl 8.6.
 Supports Discord Gateway API version 6.
@@ -17,8 +17,6 @@ Supports Discord Gateway API version 6.
 - [Tcllib 1.18](http://www.tcl.tk/software/tcllib) (*websocket*, *json*,
     *json::write*, *logger*)
 - [TLS 1.6.7](https://sourceforge.net/projects/tls) (*tls*)
-- [mkZiplib 1.0](http://mkextensions.sourceforge.net)
-    (optional, for compression of Dispatch "READY" event)
 
 ### Usage
 Use provided event handling and local state tracking.
@@ -27,12 +25,24 @@ package require discord
 
 ${discord::log}::setlevel info
 
-set token "your token here"
-set session [discord connect $token]
+proc messageCreate { sessionNs event data } {
+    set timestamp [dict get $data timestamp]
+    set username [dict get $data author username]
+    set discriminator [dict get $data author discriminator]
+    set content [dict get $data content]
+    puts "$timestamp ${username}#${discriminator}: $content"
+}
 
-puts "Token: [$session var token]"
+proc registerCallbacks { sessionNs } {
+    discord setCallback $sessionNs MESSAGE_CREATE ::messageCreate
+}
+
+set token "your token here"
+set session [discord connect $token ::registerCallbacks]
 
 vwait forever
+
+discord disconnect $session
 
 # Cleanup
 discord disconnect $session
@@ -72,6 +82,7 @@ Example output
 
 ### Links
 
+- [Tcl Developer Xchange](https://tcl.tk)
 - [Coding style guide](http://www.tcl.tk/doc/styleGuide.pdf)
 
 ### TODO
