@@ -16,7 +16,7 @@ package require logger
 ::http::register https 443 ::tls::socket
 
 namespace eval discord {
-    namespace export connect disconnect setCallback
+    namespace export connect disconnect setCallback sendMessage
     namespace ensemble create
 
     variable version 0.4.0
@@ -184,6 +184,23 @@ proc discord::setCallback { sessionNs event cmd } {
         ${log}::debug "Registered callback for event '$event': $cmd"
         return 1
     }
+}
+
+# discord::sendMessage --
+#
+#       Send a message to the channel.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       channelId   Channel ID.
+#       content     Message content.
+#
+# Results:
+#       None.
+
+proc discord::sendMessage { sessionNs channelId content } {
+    rest::CreateMessage [set ${sessionNs}::token] $channelId \
+            [dict create content $content]
 }
 
 # discord::CreateSession --
