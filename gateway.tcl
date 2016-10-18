@@ -107,7 +107,7 @@ namespace eval discord::gateway {
 #                   arguments to be passed to the callback. The last argument
 #                   passed will be a WebSocket object, which can be used to
 #                   register Dispatch event callbacks using
-#                   discord::gateway::eventCallbacks. The callback is invoked
+#                   discord::gateway::setCallbacks. The callback is invoked
 #                   before the Identify message is sent.
 #       shardInfo   (optional) list with two elements, the shard ID and number
 #                   of shards. Defaults to {0 1}, meaning shard ID 0 and 1 shard
