@@ -94,6 +94,12 @@ namespace eval discord {
 #
 # Arguments:
 #       token       Bot token or OAuth2 bearer token
+#       cmd         (optional) list that includes a callback procedure, and any
+#                   arguments to be passed to the callback. The last argument
+#                   passed will be the session namespace, which can be used to
+#                   register event callbacks using discord::setCallback. The
+#                   callback is invoked before the Identify message is sent, but
+#                   after the library sets up internal callbacks.
 #       shardInfo   (optional) list with two elements, the shard ID and number
 #                   of shards. Defaults to {0 1}, meaning shard ID 0 and 1 shard
 #                   in total.
@@ -102,7 +108,7 @@ namespace eval discord {
 #       Returns the name of a namespace that is created for the session if the
 #       connection is sucessful, and an empty string otherwise.
 
-proc discord::connect { token {shardInfo {0 1}} } {
+proc discord::connect { token {cmd {}} {shardInfo {0 1}} } {
     variable log
     variable SessionId
     variable DefCallbacks
@@ -111,7 +117,7 @@ proc discord::connect { token {shardInfo {0 1}} } {
     set name ::discord::session::$id
     set sessionNs [CreateSession $name]
     set sock [gateway::connect $token \
-            [list ::discord::SetupEventCallbacks $sessionNs] $shardInfo]
+            [list ::discord::SetupEventCallbacks $cmd $sessionNs] $shardInfo]
     if {$sock eq ""} {
         return ""
     }
@@ -161,7 +167,7 @@ proc discord::disconnect { sessionNs } {
 # Arguments:
 #       sessionNs   Name of session namespace.
 #       event       Event name.
-#       cmd         (optional) list that includes a callback procedure, and any
+#       cmd         List that includes a callback procedure, and any
 #                   arguments to be passed to the callback. Set this to the
 #                   empty string to unregister a callback.
 #
@@ -282,16 +288,23 @@ proc discord::Every { interval script } {
 #       sent.
 #
 # Arguments:
+#       cmd         List that contains a callback procedure and any other
+#                   arguments to be passed it to. The last argument to the
+#                   callback will be the session namespace. The callback  is
+#                   invoked at the end of this procedure.
 #       sessionNs   Name of a session namespace.
 #       sock        WebSocket object.
 #
 # Results:
 #       None.
 
-proc discord::SetupEventCallbacks { sessionNs sock } {
-    dict for {event callback} [set ${sessionNs}::callbacks] {
+proc discord::SetupEventCallbacks { cmd sessionNs sock } {
+    foreach event [dict keys [set ${sessionNs}::callbacks]] {
         gateway::setCallback $sock $event \
-                [list ::discord::ManageEvents $callback $sessionNs]
+                [list ::discord::ManageEvents $sessionNs]
+    }
+    if {[llength $cmd] > 0} {
+        {*}$cmd $sessionNs
     }
     return
 }
@@ -301,7 +314,6 @@ proc discord::SetupEventCallbacks { sessionNs sock } {
 #       Invokes internal library callback and user-defined callback if any.
 #
 # Arguments:
-#       callback    User-defined callback procedure to invoke after procName.
 #       sessionNs   Name of session namespace.
 #       event       Event name.
 #       data        Dictionary representing a JSON object
@@ -309,13 +321,14 @@ proc discord::SetupEventCallbacks { sessionNs sock } {
 # Results:
 #       None.
 
-proc discord::ManageEvents { callback sessionNs event data } {
+proc discord::ManageEvents { sessionNs event data } {
     variable EventToProc
     if {![catch {dict get $EventToProc $event} procName]} { 
         callback::event::$procName $sessionNs $event $data
     }
-    if {$callback ne {}} {
-        $callback $sessionNs $event $data
+    if {![catch {dict get [set ${sessionNs}::callbacks] $event} cmd]
+            && [llength $cmd] > 0} {
+        {*}$cmd $sessionNs $event $data
     }
     return
 }
