@@ -10,8 +10,8 @@ Supports Discord Gateway API version 6.
 - Callbacks can be registered for all Dispatch events
 - Event callbacks not implemented: Typing Start, User Settings Update,
   Voice State Update, Voice Server Update.
-- HTTP requests supported: Get Channel, Modify Channel, Delete Channel,
-  Get Channel Message(s), Create Message.
+- HTTP requests supported: All Channel related methods except Group DM
+  Add/Remove Recipient
 
 ### Libraries
 
@@ -20,6 +20,8 @@ Supports Discord Gateway API version 6.
 - [TLS 1.6.7](https://sourceforge.net/projects/tls) (*tls*)
 
 ### Usage
+Check example/tclqBot.tcl for the bot I wrote with this library.
+
 Use provided event handling and local state tracking.
 ```
 package require discord
