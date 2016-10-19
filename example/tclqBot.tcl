@@ -70,8 +70,8 @@ proc handlePlease { sessionNs data text } {
             set code [lindex $match 1]
             $::sandbox limit time -seconds [expr {[clock seconds] + 2}]
             catch {
-                $::sandbox eval set data "{$data}"
-                $::sandbox eval if 1 "{$code}"
+                $::sandbox eval [list set data $data]
+                $::sandbox eval [list uplevel #0 $code]
             } res
             if {[string length $res] > 0} {
                 discord sendMessage $::session $channelId $res
@@ -122,7 +122,7 @@ $sandbox alias send discord sendMessage $session
 proc asyncGets {chan {callback ""}} {
     if {[gets $chan line] >= 0} {
         if {[string trim $line] ne ""} {
-            catch {uplevel #0 if 1 "{$line}"} out
+            catch {uplevel #0 $line} out
             puts $out
         }
     }
