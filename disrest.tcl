@@ -898,8 +898,7 @@ proc discord::rest::ModifyGuildEmbed { token guildId data {cmd {}} } {
 #       timeout     (optional) timeout for HTTP request in milliseconds.
 #                   Defaults to 0, which means no timeout.
 #
-# Results:
-#       None.
+
 
 proc discord::rest::Send { token verb resource {data {}} {cmd {}} {timeout 0}
         } {
@@ -909,13 +908,17 @@ proc discord::rest::Send { token verb resource {data {}} {cmd {}} {timeout 0}
     variable RateLimits
     global discord::ApiBaseUrlV6
 
-    if {[dict exists $RateLimits $token X-RateLimit-Remaining]} {
-        set remaining [dict get $RateLimits $token X-RateLimit-Remaining]
+    regexp {^/([^/]+)} $resource -> route
+    if {$route ne {} && [dict exists $RateLimits $token $route \
+            X-RateLimit-Remaining]} {
+        set remaining [dict get $RateLimits $token $route X-RateLimit-Remaining]
         if {$remaining <= 0} {
-            set resetTime [dict get $RateLimits $token X-RateLimit-Reset]
+            set resetTime [dict get $RateLimits $token $route X-RateLimit-Reset]
             set secsRemain [expr {$resetTime - [clock seconds]}]
-            if {$secsRemain >= 0} {
-                ${log}::warn "Send: Rate-limited, reset in $secsRemain seconds"
+            puts "$secsRemain"
+            if {$secsRemain >= -3} {
+                ${log}::warn [join [list "Send: Rate-limited on /$route," \
+                        "reset in $secsRemain seconds"]]
                 return
             }
         }
@@ -935,7 +938,8 @@ proc discord::rest::Send { token verb resource {data {}} {cmd {}} {timeout 0}
         lappend body $field $value
     }
     set url "${ApiBaseUrlV6}${resource}"
-    dict set SendInfo $sendId [dict create cmd $cmd url $url token $token]
+    dict set SendInfo $sendId [dict create cmd $cmd url $url token $token \
+            route $route]
     set command [list ::http::geturl $url \
             -headers [list Authorization "Bot $token"] \
             -method $verb \
@@ -944,7 +948,7 @@ proc discord::rest::Send { token verb resource {data {}} {cmd {}} {timeout 0}
     if {[llength $body] > 0} {
         lappend command -query [::http::formatQuery {*}$body]
     }
-    ${log}::debug "Send: $command"
+    ${log}::debug "Send: $route: $command"
     {*}$command
     return
 }
@@ -966,6 +970,7 @@ proc discord::rest::SendCallback { sendId token } {
     variable SendInfo
     variable RateLimits
     interp alias {} ::discord::rest::SendCallback${sendId} {}
+    set route [dict get $SendInfo $sendId route]
     set url [dict get $SendInfo $sendId url]
     set cmd [dict get $SendInfo $sendId cmd]
     set discordToken [dict get $SendInfo $sendId token]
@@ -976,7 +981,8 @@ proc discord::rest::SendCallback { sendId token } {
             foreach header [list X-RateLimit-Limit X-RateLimit-Remaining \
                     X-RateLimit-Reset] {
                 if {[info exists meta($header)]} {
-                    dict set RateLimits $discordToken $header $meta($header)
+                    dict set RateLimits $discordToken $route \
+                            $header $meta($header)
                 }
             }
             set code [::http::code $token]
