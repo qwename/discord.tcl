@@ -336,18 +336,18 @@ proc discord::callback::event::GuildMembersChunk { sessionNs event data } {
 
 proc discord::callback::event::GuildRole { sessionNs event data } {
     set log [set ${sessionNs}::log]
-    set role [dict get $data role]
-    foreach field {id name} {
-        set $field [dict get $role $field]
-    }
     set guildId [dict get $data guild_id]
     set roles [dict get [set ${sessionNs}::guilds] $guildId roles]
+    set role {}
     switch $event {
         GUILD_ROLE_CREATE {
+            set role [dict get $data role]
             lappend roles $role
             dict set ${sessionNs}::guilds $guildId roles $roles
         }
         GUILD_ROLE_UPDATE {
+            set role [dict get $data role]
+            set id [dict get $role id]
             set newRoles [list]
             foreach r $roles {
                 if {$id == [dict get $r id]} {
@@ -363,13 +363,16 @@ proc discord::callback::event::GuildRole { sessionNs event data } {
             set newRoles [list]
             foreach r $roles {
                 if {$id == [dict get $r id]} {
+                    set role $i
                     continue
-                } else {
-                    lappend newRoles $r
                 }
+                lappend newRoles $r
             }
             dict set ${sessionNs}::guilds $guildId roles $newRoles
         }
+    }
+    foreach field {id name} {
+        set $field [dict get $role $field]
     }
     set guildName [dict get [set ${sessionNs}::guilds] $guildId name]
     ${log}::debug "$event '$guildName' ($guildId): '$name' ($id)"
