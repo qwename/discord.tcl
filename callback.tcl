@@ -195,8 +195,8 @@ proc discord::callback::event::GuildBan { sessionNs event data } {
             foreach field {username discriminator} {
                 set $field [dict get $data $field]
             }
-            ${log}::debug [join "$event '$guildName' ($guildId):" \
-                    "${username}#$discriminator ($id)"
+            ${log}::debug [join [list "$event '$guildName' ($guildId):" \
+                    "${username}#$discriminator ($id)"]]
         }
     }
     return
@@ -293,8 +293,8 @@ proc discord::callback::event::GuildMember { sessionNs event data } {
     foreach field {username discriminator} {
         set $field [dict get $user $field]
     }
-    ${log}::debug [join "$event '$guildName' ($guildId):" \
-            "${username}#$discriminator ($id)"]
+    ${log}::debug [join [list "$event '$guildName' ($guildId):" \
+            "${username}#$discriminator ($id)"]]
     return
 }
 
@@ -315,9 +315,9 @@ proc discord::callback::event::GuildMembersChunk { sessionNs event data } {
     set guildId [dict get $data guild_id]
     set members [dict get $data members]
     set guildName [dict get [set ${sessionNs}::guilds] $guildId name]
-    ${log}::debug [join \
+    ${log}::debug [join [list \
             "$event: Received [llength $members] offline members in" \
-            "'$guildName' ($guildId)"]
+            "'$guildName' ($guildId)"]]
     return
 }
 
