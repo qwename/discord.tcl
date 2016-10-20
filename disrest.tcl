@@ -882,6 +882,57 @@ proc discord::rest::ModifyGuildEmbed { token guildId data {cmd {}} } {
     Send $token GET "/guilds/$guildId/embed" $data $cmd
 }
 
+# discord::rest::GetInvite --
+#
+#       Returns an invite for the given code.
+#
+# Arguments:
+#       token       Bot token or OAuth2 bearer token.
+#       inviteCode  Invite Code.
+#       cmd         (optional) callback procedure invoked after a response is
+#                   received.
+#
+# Results:
+#       Passes an invite dictionary to the callback.
+
+proc discord::rest::GetInvite { token inviteCode {cmd {}} } {
+    Send $token GET "/invites/$inviteCode" {} $cmd
+}
+
+# discord::rest::DeleteInvite --
+#
+#       Delete an invite.
+#
+# Arguments:
+#       token       Bot token or OAuth2 bearer token.
+#       inviteCode  Invite Code.
+#       cmd         (optional) callback procedure invoked after a response is
+#                   received.
+#
+# Results:
+#       Passes an invite dictionary to the callback.
+
+proc discord::rest::DeleteInvite { token inviteCode {cmd {}} } {
+    Send $token DELETE "/invites/$inviteCode" {} $cmd
+}
+
+# discord::rest::AcceptInvite --
+#
+#       Accept an invite.
+#
+# Arguments:
+#       token       Bot token or OAuth2 bearer token.
+#       inviteCode  Invite Code.
+#       cmd         (optional) callback procedure invoked after a response is
+#                   received.
+#
+# Results:
+#       Passes an invite dictionary to the callback.
+
+proc discord::rest::DeleteInvite { token inviteCode {cmd {}} } {
+    Send $token POST "/invites/$inviteCode" {} $cmd
+}
+
 # discord::rest::Send --
 #
 #       Send HTTP requests to the Discord HTTP API.
@@ -898,7 +949,8 @@ proc discord::rest::ModifyGuildEmbed { token guildId data {cmd {}} } {
 #       timeout     (optional) timeout for HTTP request in milliseconds.
 #                   Defaults to 0, which means no timeout.
 #
-
+# Results:
+#       None.
 
 proc discord::rest::Send { token verb resource {data {}} {cmd {}} {timeout 0}
         } {
