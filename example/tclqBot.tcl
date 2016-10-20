@@ -58,12 +58,6 @@ ${discord::log}::setlevel debug
 proc handlePlease { sessionNs data text } {
     set channelId [dict get $data channel_id]
     switch -regexp -matchvar match -- $text {
-        {^say (.*)$} {
-            set msg [lindex $match 1]
-            if {[string length $msg] > 0} {
-                discord sendMessage $::session $channelId $msg
-            }
-        }
         {^eval ```(.*)```$} -
         {^eval `(.*)`$} -
         {^eval (.*)$} {
