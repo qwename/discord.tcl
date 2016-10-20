@@ -93,6 +93,7 @@ Example output
 
 ### TODO
 
+- Message queue for rate-limited requests.
 - Find out HTTP API Batch Modify Guild Role payload format.
 - Implement Request Guild Members Gateway opcode.
 - Implement all Gateway Dispatch event callbacks.
