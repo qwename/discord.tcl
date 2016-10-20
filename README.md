@@ -23,7 +23,8 @@ Supports Discord Gateway API version 6.
 - [TLS 1.6.7](https://sourceforge.net/projects/tls) (*tls*)
 
 ### Usage
-Check example/tclqBot for the bot written with this library.
+Check out [tclqBot](https://github.com/qwename/tclqBot) for the bot written
+with this library.
 
 Use provided event handling and local state tracking.
 ```
