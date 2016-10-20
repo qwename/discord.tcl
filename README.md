@@ -5,14 +5,16 @@ Supports Discord Gateway API version 6.
 
 ### Status
 
-- Can only connect to the Gateway
+- Gateway API
+  - Request Guild Members not implemented
+- HTTP API
+  - All Channel related requests except Group DM Add/Remove Recipient.
+  - All Guild related requests except Batch Modify Guild Role.
+  - All Invite related requests.
 - Tracks users, guilds, DM channels
 - Callbacks can be registered for all Dispatch events
 - Event callbacks not implemented: Typing Start, User Settings Update,
   Voice State Update, Voice Server Update.
-- HTTP requests supported:
-  - All Channel related requests except Group DM Add/Remove Recipient.
-  - All Guild related requests except Batch Modify Guild Role.
 
 ### Libraries
 
@@ -91,7 +93,9 @@ Example output
 
 ### TODO
 
-- Implement all Gateway Dispatch event callbacks
+- Find out HTTP API Batch Modify Guild Role payload format.
+- Implement Request Guild Members Gateway opcode.
+- Implement all Gateway Dispatch event callbacks.
 - Test cases for "pure" procs, send HTTP requests to test both HTTP responses
   and Gateway events.
 - Find out why *zlib inflate* fails.
