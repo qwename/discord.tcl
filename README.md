@@ -10,8 +10,9 @@ Supports Discord Gateway API version 6.
 - Callbacks can be registered for all Dispatch events
 - Event callbacks not implemented: Typing Start, User Settings Update,
   Voice State Update, Voice Server Update.
-- HTTP requests supported: All Channel related methods except Group DM
-  Add/Remove Recipient
+- HTTP requests supported:
+  - All Channel related requests except Group DM Add/Remove Recipient.
+  - All Guild related requests except Batch Modify Guild Role.
 
 ### Libraries
 
@@ -91,6 +92,7 @@ Example output
 ### TODO
 
 - Implement all Gateway Dispatch event callbacks
-- Create test cases for most procedures.
+- Test cases for "pure" procs, send HTTP requests to test both HTTP responses
+  and Gateway events.
 - Find out why *zlib inflate* fails.
 - Local message cache using sqlite3/tdbc::sqlite3/tdbc::postgres package.
