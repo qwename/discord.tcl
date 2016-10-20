@@ -127,6 +127,7 @@ proc discord::connect { token {cmd {}} {shardInfo {0 1}} } {
     set ${sessionNs}::guilds [dict create]
     set ${sessionNs}::dmChannels [dict create]
     set ${sessionNs}::users [dict create]
+    set ${sessionNs}::channels [dict create]
     set ${sessionNs}::log [::logger::init $sessionNs]
     set ${sessionNs}::callbacks $DefCallbacks
     return $sessionNs

@@ -93,6 +93,7 @@ proc discord::callback::event::Channel { sessionNs event data } {
             CHANNEL_CREATE {
                 lappend channels $data
                 dict set ${sessionNs}::guilds $guildId channels $channels
+                dict set ${sessionNs}::channels $id $guildId
             }
             CHANNEL_UPDATE {
                 set newChannels [list]
@@ -111,11 +112,11 @@ proc discord::callback::event::Channel { sessionNs event data } {
                 foreach channel $channels {
                     if {$id == [dict get $channel id]} {
                         continue
-                    } else {
-                        lappend newChannels $channel
                     }
+                    lappend newChannels $channel
                 }
                 dict set ${sessionNs}::guilds $guildId channels $newChannels
+                dict unset ${sessionNs}::channels $id
             }
         }
         set name [dict get $data name]
@@ -142,6 +143,9 @@ proc discord::callback::event::Guild { sessionNs event data } {
     switch $event {
         GUILD_CREATE {
             dict set ${sessionNs}::guilds $id $data
+            foreach channel [dict get $data channels] {
+                dict set ${sessionNs}::channels [dict get $channel id] $id
+            }
             foreach member [dict get $data members] {
                 set user [dict get $member user]
                 set userId [dict get $user id]
