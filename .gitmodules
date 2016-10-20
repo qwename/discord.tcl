@@ -1,0 +1,3 @@
+[submodule "example/tclqBot"]
+	path = example/tclqBot
+	url = https://github.com/qwename/tclqBot
