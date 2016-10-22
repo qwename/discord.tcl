@@ -326,3 +326,42 @@ proc discord::rest::DeletePinnedChannelMessage { token channelId messageId \
         {cmd {}} } {
     Send $token DELETE "/channels/$channelId/pins/$messageId" {} $cmd
 }
+
+# discord::rest::GroupDMAddRecipient --
+#
+#       Adds a recipient to a Group DM using their access token.
+#
+# Arguments:
+#       token       Bot token or OAuth2 bearer token.
+#       channelId   Channel ID.
+#       userId      User ID.
+#       data        Dictionary representing a JSON object. Only the key
+#                   access_token should be present.
+#       cmd         (optional) callback procedure invoked after a response is
+#                   received.
+#
+# Results:
+#       None. (Probably a user dictionary)
+
+proc discord::rest::GroupDMAddRecipient { token channelId userId data {cmd {}} \
+        } {
+    Send $token PUT "/channels/$channelId/recipients/$userId" $data $cmd
+}
+
+# discord::rest::GroupDMRemoveRecipient --
+#
+#       Removes a recipient from a Group DM.
+#
+# Arguments:
+#       token       Bot token or OAuth2 bearer token.
+#       channelId   Channel ID.
+#       userId      User ID.
+#       cmd         (optional) callback procedure invoked after a response is
+#                   received.
+#
+# Results:
+#       None.
+
+proc discord::rest::GroupDMRemoveRecipient { token channelId userId {cmd {}} } {
+    Send $token DELETE "/channels/$channelId/recipients/$userId" {} $cmd
+}
