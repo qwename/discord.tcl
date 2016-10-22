@@ -15,5 +15,8 @@ package ifneeded discord 0.5.0 "
     source [file join $dir disrest_channel.tcl] ;
     source [file join $dir disrest_guild.tcl] ;
     source [file join $dir disrest_invite.tcl] ;
+    source [file join $dir disrest_user.tcl] ;
+    source [file join $dir disrest_voice.tcl] ;
+    source [file join $dir disrest_webhook.tcl] ;
     source [file join $dir discord.tcl] ;
 "

@@ -6,12 +6,14 @@ Supports Discord Gateway API version 6.
 ### Status
 
 - Gateway API
-  - Request Guild Members not implemented
+  - All events except Request Guild Members.
 - HTTP API
-  - All Channel related requests except Group DM Add/Remove Recipient.
+  - All Channel related requests.
   - All Guild related requests except Batch Modify Guild Role.
   - All Invite related requests.
-- Tracks users, guilds, DM channels
+  - All User related requests.
+  - All Voice related requests.
+  - All Webhook related requests except Slack/Github Webhooks.
 - Callbacks can be registered for all Dispatch events
 - Event callbacks not implemented: Typing Start, User Settings Update,
   Voice State Update, Voice Server Update.
