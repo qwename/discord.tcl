@@ -198,9 +198,10 @@ proc discord::setCallback { sessionNs event cmd } {
 #       content     Message content.
 #
 # Results:
-#       Returns a coroutine context name if successful. If the caller is a
-#       coroutine, it should yield after calling this procedure. The caller can
-#       then get the HTTP response by calling the returned coroutine. Refer to
+#       Returns a coroutine context name if the caller is a coroutine, and an
+#       empty string otherwise. If the caller is a coroutine, it should yield
+#       after calling this procedure. The caller can then get the HTTP response
+#       by calling the returned coroutine. Refer to
 #       discord::rest::CallbackCoroutine for more details.
 
 proc discord::sendMessage { sessionNs channelId content } {
@@ -208,10 +209,13 @@ proc discord::sendMessage { sessionNs channelId content } {
     set caller [uplevel info coroutine]
     set count [set ${sessionNs}::sendMessageCount]
     incr ${sessionNs}::SendMessageCount
-    set name ${sessionNs}::sendMsgCoro$count
+    set cmd [list]
+    if {$caller ne {}} {
+        set name ${sessionNs}::sendMsgCoro$count
+        set cmd [list coroutine $name discord::rest::CallbackCoroutine $caller]
+    }
     rest::CreateMessage [set ${sessionNs}::token] $channelId \
-            [dict create content $content] \
-            [list coroutine $name discord::rest::CallbackCoroutine $caller]
+            [dict create content $content] $cmd
     return $name
 }
 
