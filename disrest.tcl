@@ -1092,7 +1092,9 @@ proc discord::rest::SendCallback { sendId token } {
 #       Returns a list containing data and httpCode.
 
 proc discord::rest::CallbackCoroutine { coroutine data httpCode } {
-    after idle $coroutine
-    yield
+    if {$coroutine ne {}} {
+        after idle $coroutine
+        yield
+    }
     return [list $data $httpCode]
 }
