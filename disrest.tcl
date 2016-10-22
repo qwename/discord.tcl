@@ -73,7 +73,7 @@ proc discord::rest::Send { token verb resource {data {}} {cmd {}} args } {
         }
         return
     }
-    regexp {^/([^/]+)} $resource -> route
+    regexp {^(/(?:channels|guilds)/\d+)} $resource -> route
     if {$route ne {} && [dict exists $RateLimits $token $route \
             X-RateLimit-Remaining]} {
         set remaining [dict get $RateLimits $token $route X-RateLimit-Remaining]
