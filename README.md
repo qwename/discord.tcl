@@ -23,38 +23,10 @@ Supports Discord Gateway API version 6.
 - [TLS 1.6.7](https://sourceforge.net/projects/tls) (*tls*)
 
 ### Usage
-Check out [tclqBot](https://github.com/qwename/tclqBot) for the bot written
+Check out [tclqBot](https://github.com/qwename/tclqBot) for a bot written
 with this library.
 
-Use provided event handling and local state tracking.
-```
-package require discord
-
-${discord::log}::setlevel info
-
-proc messageCreate { sessionNs event data } {
-    set timestamp [dict get $data timestamp]
-    set username [dict get $data author username]
-    set discriminator [dict get $data author discriminator]
-    set content [dict get $data content]
-    puts "$timestamp ${username}#${discriminator}: $content"
-}
-
-proc registerCallbacks { sessionNs } {
-    discord setCallback $sessionNs MESSAGE_CREATE ::messageCreate
-}
-
-set token "your token here"
-set session [discord connect $token ::registerCallbacks]
-
-vwait forever
-
-discord disconnect $session
-
-# Cleanup
-discord disconnect $session
-```
-DIY
+DIY: For when you feel like writing your own discord.tcl.
 ```
 package require discord
 
