@@ -38,14 +38,13 @@ namespace eval discord::rest {
 #                   additional arguments to be passed to it. The last two
 #                   arguments will be a data dictionary, and the HTTP code or
 #                   error.
-#       timeout     (optional) timeout for HTTP request in milliseconds.
-#                   Defaults to 0, which means no timeout.
+#       args        (optional) addtional options and values to be passed to
+#                   http::geturl.
 #
 # Results:
 #       None.
 
-proc discord::rest::Send { token verb resource {data {}} {cmd {}} {timeout 0}
-        } {
+proc discord::rest::Send { token verb resource {data {}} {cmd {}} args } {
     variable log
     variable SendId
     variable SendInfo
@@ -87,8 +86,7 @@ proc discord::rest::Send { token verb resource {data {}} {cmd {}} {timeout 0}
     set command [list ::http::geturl $url \
             -headers [list Authorization "Bot $token"] \
             -method $verb \
-            -timeout $timeout \
-            -command $callbackName]
+            -command $callbackName {*}$args]
     if {[llength $body] > 0} {
         lappend command -query [::http::formatQuery {*}$body]
     }
