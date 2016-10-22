@@ -23,6 +23,9 @@ namespace eval discord::rest {
     variable SendInfo [dict create]
 
     variable RateLimits [dict create]
+    variable SendCount [dict create]
+    variable BurstLimitSend 5
+    variable BurstLimitPeriod 1
 }
 
 # discord::rest::Send --
@@ -49,8 +52,27 @@ proc discord::rest::Send { token verb resource {data {}} {cmd {}} args } {
     variable SendId
     variable SendInfo
     variable RateLimits
+    variable SendCount
+    variable BurstLimitSend
+    variable BurstLimitPeriod
     global discord::ApiBaseUrlV6
 
+    if {![dict exists $SendCount $token]} {
+        dict set SendCount $token 0
+    }
+    set sendCount [dict get $SendCount $token]
+    if {$sendCount == 0} {
+        after [expr {$BurstLimitPeriod * 1000}] [list \
+                dict set ::discord::rest::SendCount $token 0]
+    }
+    if {$sendCount >= $BurstLimitSend} {
+        ${log}::warn [join [list "Send: Reached $BurstLimitSend messages sent" \
+                "in $BurstLimitPeriod s."]]
+        if {[llength $cmd] > 0} {
+            {*}$cmd {} "Local rate-limit"
+        }
+        return
+    }
     regexp {^/([^/]+)} $resource -> route
     if {$route ne {} && [dict exists $RateLimits $token $route \
             X-RateLimit-Remaining]} {
@@ -71,6 +93,7 @@ proc discord::rest::Send { token verb resource {data {}} {cmd {}} args } {
         return 0
     }
 
+    dict incr SendCount $token
     set sendId $SendId
     incr SendId
     set callbackName ::discord::rest::SendCallback${sendId}
@@ -86,7 +109,8 @@ proc discord::rest::Send { token verb resource {data {}} {cmd {}} args } {
     set command [list ::http::geturl $url \
             -headers [list Authorization "Bot $token"] \
             -method $verb \
-            -command $callbackName {*}$args]
+            -command $callbackName \
+            {*}$args]
     if {[llength $body] > 0} {
         lappend command -query [::http::formatQuery {*}$body]
     }
