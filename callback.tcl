@@ -364,10 +364,11 @@ proc discord::callback::event::GuildRole { sessionNs event data } {
             dict set ${sessionNs}::guilds $guildId roles $newRoles
         }
         GUILD_ROLE_DELETE {
+            set id [dict get $data role_id]
             set newRoles [list]
             foreach r $roles {
                 if {$id == [dict get $r id]} {
-                    set role $i
+                    set role $r
                     continue
                 }
                 lappend newRoles $r
