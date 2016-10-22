@@ -8,6 +8,8 @@
 # See the file "LICENSE" for information on usage and redistribution of this
 # file.
 
+package require json
+
 # All data dictionary keys are required unless stated otherwise.
 
 # discord::rest::GetCurrentUser --
@@ -125,7 +127,9 @@ proc discord::rest::GetUserDMs { token {cmd {}} } {
 #       Passes a DM channel dictionary to the callback.
 
 proc discord::rest::CreateDM { token data {cmd {}} } {
-    Send $token POST "/users/@me/channels" $data $cmd -type "application/json"
+    Send $token POST "/users/@me/channels" {} $cmd \
+            -type "application/json" \
+            -query [json::dict2json $data]
 }
 
 # discord::rest::CreateGroupDM --
