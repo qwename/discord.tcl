@@ -175,7 +175,7 @@ proc discord::rest::DeleteMessage { token channelId messageId {cmd {}} } {
 #       None.
 
 proc discord::rest::BulkDeleteMessages { token channelId data {cmd {}} } {
-    Send $token POST "/channels/$channelId/messages/bulk_delete" $data $cmd
+    Send $token POST "/channels/$channelId/messages/bulk-delete" $data $cmd
 }
 
 # discord::rest::EditChannelPermissions --
