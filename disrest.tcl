@@ -1072,13 +1072,14 @@ proc discord::rest::SendCallback { sendId token } {
     return
 }
 
-# discord::disrest::CallbackCoroutine
+# discord::rest::CallbackCoroutine
 #
 #       Resume a coroutine that is waiting for the response from a previous
 #       call to Send. The coroutine should call this coroutine after resumption
 #       to get the results. This procedure should be passed in a list to the
 #       'cmd' argument of Send, e.g.
-#           Send ... [list discord::disrest::CallbackCoroutine $name]
+#           Send ... [list coroutine $contextName \
+#                   discord::rest::CallbackCoroutine $callerName]
 #
 # Arguments:
 #       coroutine   Coroutine to be resumed.
