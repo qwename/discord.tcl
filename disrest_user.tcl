@@ -125,7 +125,7 @@ proc discord::rest::GetUserDMs { token {cmd {}} } {
 #       Passes a DM channel dictionary to the callback.
 
 proc discord::rest::CreateDM { token data {cmd {}} } {
-    Send $token POST "/users/@me/channels" $data $cmd
+    Send $token POST "/users/@me/channels" $data $cmd -type "application/json"
 }
 
 # discord::rest::CreateGroupDM --
