@@ -16,7 +16,7 @@ package require logger
 ::http::register https 443 ::tls::socket
 
 namespace eval discord {
-    namespace export connect disconnect setCallback sendMessage
+    namespace export connect disconnect setCallback
     namespace ensemble create
 
     variable version 0.5.0
@@ -123,7 +123,6 @@ proc discord::connect { token {cmd {}} {shardInfo {0 1}} } {
     }
     set ${sessionNs}::sock $sock
     set ${sessionNs}::token $token
-    set ${sessionNs}::sendMessageCount 0
     set ${sessionNs}::self [dict create]
     set ${sessionNs}::guilds [dict create]
     set ${sessionNs}::dmChannels [dict create]
@@ -186,37 +185,6 @@ proc discord::setCallback { sessionNs event cmd } {
         ${log}::debug "Registered callback for event '$event': $cmd"
         return 1
     }
-}
-
-# discord::sendMessage --
-#
-#       Send a message to the channel.
-#
-# Arguments:
-#       sessionNs   Name of session namespace.
-#       channelId   Channel ID.
-#       content     Message content.
-#
-# Results:
-#       Returns a coroutine context name if the caller is a coroutine, and an
-#       empty string otherwise. If the caller is a coroutine, it should yield
-#       after calling this procedure. The caller can then get the HTTP response
-#       by calling the returned coroutine. Refer to
-#       discord::rest::CallbackCoroutine for more details.
-
-proc discord::sendMessage { sessionNs channelId content } {
-    variable log
-    set caller [uplevel info coroutine]
-    set count [set ${sessionNs}::sendMessageCount]
-    incr ${sessionNs}::SendMessageCount
-    set cmd [list]
-    if {$caller ne {}} {
-        set name ${sessionNs}::sendMsgCoro$count
-        set cmd [list coroutine $name discord::rest::CallbackCoroutine $caller]
-    }
-    rest::CreateMessage [set ${sessionNs}::token] $channelId \
-            [dict create content $content] $cmd
-    return $name
 }
 
 # discord::CreateSession --
