@@ -123,6 +123,7 @@ proc discord::connect { token {cmd {}} {shardInfo {0 1}} } {
     }
     set ${sessionNs}::sock $sock
     set ${sessionNs}::token $token
+    set ${sessionNs}::sendMessageCount 0
     set ${sessionNs}::self [dict create]
     set ${sessionNs}::guilds [dict create]
     set ${sessionNs}::dmChannels [dict create]
@@ -197,11 +198,27 @@ proc discord::setCallback { sessionNs event cmd } {
 #       content     Message content.
 #
 # Results:
-#       None.
+#       Returns a coroutine context name if successful. Raises an error if the
+#       caller is not a coroutine, as the caller should yield after calling this
+#       procedure. The caller can get the HTTP request response by calling the
+#       returned coroutine. Refer to discord::rest::CallbackCoroutine for
+#       more details.
 
 proc discord::sendMessage { sessionNs channelId content } {
+    variable log
+    set caller [uplevel info coroutine]
+    if {$caller eq {}} {
+        set caller [uplevel {lindex [info level 0] 0}]
+        ${log}::error "sendMessage: Caller must be a coroutine: $caller"
+        return -code error "Caller is not a coroutine: $caller"
+    }
+    set count [set ${sessionNs}::sendMessageCount]
+    incr ${sessionNs}::SendMessageCount
+    set name ${sessionNs}::sendMsgCoro$count
     rest::CreateMessage [set ${sessionNs}::token] $channelId \
-            [dict create content $content]
+            [dict create content $content] \
+            [list coroutine $name discord::rest::CallbackCoroutine $caller]
+    return $name
 }
 
 # discord::CreateSession --

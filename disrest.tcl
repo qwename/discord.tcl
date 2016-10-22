@@ -1071,3 +1071,27 @@ proc discord::rest::SendCallback { sendId token } {
     dict unset SendInfo $sendId
     return
 }
+
+# discord::disrest::CallbackCoroutine
+#
+#       Resume a coroutine that is waiting for the response from a previous
+#       call to Send. The coroutine should call this coroutine after resumption
+#       to get the results. This procedure should be passed in a list to the
+#       'cmd' argument of Send, e.g.
+#           Send ... [list discord::disrest::CallbackCoroutine $name]
+#
+# Arguments:
+#       coroutine   Coroutine to be resumed.
+#       data        Dictionary representing a JSON object, or empty if an error
+#                   had occurred.
+#       httpCode    The HTTP status reply, or error message if an error had
+#                   occurred.
+#
+# Results:
+#       Returns a list containing data and httpCode.
+
+proc discord::rest::CallbackCoroutine { coroutine data httpCode } {
+    after idle $coroutine
+    yield
+    return [list $data $httpCode]
+}
