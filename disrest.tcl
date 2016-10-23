@@ -144,6 +144,7 @@ proc discord::rest::SendCallback { sendId token } {
     set url [dict get $SendInfo $sendId url]
     set cmd [dict get $SendInfo $sendId cmd]
     set discordToken [dict get $SendInfo $sendId token]
+    set state [array get $token]
     set status [::http::status $token]
     switch $status {
         ok {
@@ -158,35 +159,39 @@ proc discord::rest::SendCallback { sendId token } {
             set code [::http::code $token]
             set ncode [::http::ncode $token]
             if {$ncode >= 300} {
-                ${log}::warn "SendCallback${sendId}: $url: $status ($code)"
-            } else {
-                ${log}::debug "SendCallback${sendId}: $url: $status ($code)"
-            }
-            set cmd [dict get $SendInfo $sendId cmd]
-            if {[llength $cmd] > 0} {
-                if {[catch {json::json2dict [::http::data $token]} data]} {
-                    ${log}::error "SendCallback${sendId}: $url: $data"
-                    set data {}
+                ${log}::warn [join [list \
+                        "SendCallback${sendId}: $url: $code:" \
+                        [array get $token body]]]
+                if {[llength $cmd] > 0} {
+                    after idle [list {*}$cmd {} $state]
                 }
-                after idle [list {*}$cmd $data $code]
+            } else {
+                ${log}::debug "SendCallback${sendId}: $url: $code"
+                if {[llength $cmd] > 0} {
+                    if {[catch {json::json2dict [::http::data $token]} data]} {
+                        ${log}::error "SendCallback${sendId}: $url: $data"
+                        set data {}
+                    }
+                    after idle [list {*}$cmd $data $state]
+                }
             }
         }
         error {
             set error [::http::error $token]
-            ${log}::error "SendCallback${sendId}: $url: $status ($error)"
+            ${log}::error "SendCallback${sendId}: $url: error: $error"
             if {[llength $cmd] > 0} {
-                after idle [list {*}$cmd {} [::http::error $token]]
+                after idle [list {*}$cmd {} $state]
             }
         }
         default {
             ${log}::error "SendCallback${sendId}: $url: $status"
             if {[llength $cmd] > 0} {
-                after idle [list {*}$cmd {} $status]
+                after idle [list {*}$cmd {} $state]
             }
         }
     }
-    ::http::cleanup $token
     dict unset SendInfo $sendId
+    ::http::cleanup $token
     return
 }
 
@@ -203,16 +208,15 @@ proc discord::rest::SendCallback { sendId token } {
 #       coroutine   Coroutine to be resumed.
 #       data        Dictionary representing a JSON object, or empty if an error
 #                   had occurred.
-#       httpCode    The HTTP status reply, or error message if an error had
-#                   occurred.
+#       state       The HTTP state array in a list.
 #
 # Results:
-#       Returns a list containing data and httpCode.
+#       Returns a list containing data and state.
 
-proc discord::rest::CallbackCoroutine { coroutine data httpCode } {
+proc discord::rest::CallbackCoroutine { coroutine data state } {
     if {[llength [info commands $coroutine]] > 0} {
         after idle $coroutine
         yield
     }
-    return [list $data $httpCode]
+    return [list $data $state]
 }
