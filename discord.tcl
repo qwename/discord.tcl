@@ -226,12 +226,13 @@ proc discord::DeleteSession { sessionNs } {
 # Arguments:
 #       cached  If true, return a cached URL value if available, or else send a
 #               new request to retrieve one. Defaults to 1, meaning true.
+#       args    Additional arguments to be passed to http::geturl.
 #
 # Results:
 #       Caches the Gateway API wss URL string in the variable GatewayUrl and
 #       returns the value. An error will be raised if the operation failed.
 
-proc discord::GetGateway { {cached 1} } {
+proc discord::GetGateway { {cached 1} args } {
     variable log
     variable GatewayUrl
     if {$cached} {
@@ -239,24 +240,26 @@ proc discord::GetGateway { {cached 1} } {
             ${log}::info "Using cached Gateway API wss URL."
             return $GatewayUrl
         } else {
-            ${log}::warn "No cached Gateway API wss URL."
+            ${log}::notice "No cached Gateway API wss URL."
         }
     }
     variable ApiBaseUrlV6
     set url "${ApiBaseUrlV6}/gateway"
     ${log}::info "Retrieving Gateway API wss URL from $url."
-    if {[catch {::http::geturl $url} token options]} {
+    if {[catch {::http::geturl $url {*}$args} token options]} {
         ${log}::error $token
         return -options $options $token
     }
-    upvar #0 $token state
-    set code [::http::code $token]
     set ncode [::http::ncode $token]
+    upvar #0 $token state
+    set code $state(http)
     set body $state(body)
     set status $state(status)
     ::http::cleanup $token
-    if {$status ne "ok" || $ncode != 200} {
-        ${log}::error "$status: $code\n$body"
+    if {$status ne "ok"} {
+        return -code error $status
+    } elseif {$ncode != 200} {
+        ${log}::error "$code\n$body"
         return -code error $ncode
     }
     if {[catch {::json::json2dict $body} data options]} {
