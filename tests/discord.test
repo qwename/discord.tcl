@@ -1,0 +1,75 @@
+# Commands covered: GetGateway
+#
+# discord.test --
+#
+#       This file contains tests commands in the root discord namespace.
+#       Sourcing this file into Tcl runs the tests and generates output for
+#       errors. No output means no errors were found.
+#
+# Copyright (c) 2016, Yixin Zhang
+#
+# See the file "LICENSE" for information on usage and redistribution of this
+# file.
+
+package require tcltest
+namespace import tcltest::*
+verbose [list body error start usec]
+
+# Add parent directory to auto_path to load the discord package.
+
+set scriptDir [file dirname [info script]]
+lappend ::auto_path "$scriptDir/../"
+package require discord
+
+test GetGateway-1.1 {Retrieve uncached URL, no cached URL} -body {
+    discord::GetGateway 0
+} -cleanup {
+    set discord::GatewayUrl ""
+} -match regexp -result {^wss://.+$} 
+
+set testUrl "wss://discord.test"
+test GetGateway-1.2 {Retrieve cached URL, has cached URL} -setup {
+    set discord::GatewayUrl $testUrl
+} -body {
+    discord::GetGateway
+} -cleanup {
+    set discord::GatewayUrl ""
+} -result $testUrl
+
+test GetGateway-1.3 {Retrieve uncached URL, has cached URL} -setup {
+    set discord::GatewayUrl $testUrl
+} -body {
+    set url [discord::GetGateway 0]
+    return [expr {$url ne $testUrl}]
+} -cleanup {
+    set discord::GatewayUrl ""
+} -result 1
+
+test GetGateway-1.4 {Retrieve cached URL, no cached URL} -body {
+    discord::GetGateway
+} -cleanup {
+    set discord::GatewayUrl ""
+} -match regexp -result {^wss://.+$}
+
+set originalUrl $discord::ApiBaseUrlV6
+test GetGateway-2.1 {Invalid base API URL} -setup {
+    set discord::ApiBaseUrlV6 "tcl://discord.tcl"
+} -body {
+    if {[catch {discord::GetGateway} url options]} {
+        return -options $options $url
+    }
+} -cleanup {
+    set discord::GatewayUrl ""
+    set discord::ApiBaseUrlV6 $originalUrl
+} -returnCodes error -result {Unsupported URL type "tcl"}
+
+# GetGateway-2.2 {nc listen on local port and close immediately upon connection}
+
+test GetGateway-2.3 {HTTP base API URL instead of HTTPS} -setup {
+    set discord::ApiBaseUrlV6 [regsub {^https} $discord::ApiBaseUrlV6 http]
+} -body {
+    discord::GetGateway
+} -cleanup {
+    set discord::GatewayUrl ""
+    set discord::ApiBaseUrlV6 $originalUrl
+} -returnCodes error -result 301
