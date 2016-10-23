@@ -61,6 +61,16 @@ Example output
 2016-10-09T18:43:36.651000+00:00 qwename#5406: hi there
 ```
 
+### Testing
+
+Sourcing or executing a .test file found under tests/ will test related
+namespace procedures.
+
+E.g.
+```
+tclsh tests/discord.test
+```
+
 ### Links
 
 - [Tcl Developer Xchange](https://tcl.tk)
