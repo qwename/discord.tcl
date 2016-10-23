@@ -45,7 +45,7 @@ namespace eval discord::rest {
 #                   http::geturl.
 #
 # Results:
-#       None.
+#       Raises an exception if verb is unknown.
 
 proc discord::rest::Send { token verb resource {data {}} {cmd {}} args } {
     variable log
@@ -57,43 +57,47 @@ proc discord::rest::Send { token verb resource {data {}} {cmd {}} args } {
     variable BurstLimitPeriod
     global discord::ApiBaseUrlV6
 
-    if {![dict exists $SendCount $token]} {
-        dict set SendCount $token 0
-    }
-    set sendCount [dict get $SendCount $token]
-    if {$sendCount == 0} {
-        after [expr {$BurstLimitPeriod * 1000}] [list \
-                dict set ::discord::rest::SendCount $token 0]
-    }
-    if {$sendCount >= $BurstLimitSend} {
-        ${log}::warn [join [list "Send: Reached $BurstLimitSend messages sent" \
-                "in $BurstLimitPeriod s."]]
-        if {[llength $cmd] > 0} {
-            {*}$cmd {} "Local rate-limit"
-        }
-        return
-    }
-    regexp {^(/(?:channels|guilds)/\d+)} $resource -> route
-    if {$route ne {} && [dict exists $RateLimits $token $route \
-            X-RateLimit-Remaining]} {
-        set remaining [dict get $RateLimits $token $route X-RateLimit-Remaining]
-        if {$remaining <= 0} {
-            set resetTime [dict get $RateLimits $token $route X-RateLimit-Reset]
-            set secsRemain [expr {$resetTime - [clock seconds]}]
-            puts "$secsRemain"
-            if {$secsRemain >= -3} {
-                ${log}::warn [join [list "Send: Rate-limited on /$route," \
-                        "reset in $secsRemain seconds"]]
-                return
-            }
-        }
-    }
     if {$verb ni [list GET POST PUT PATCH DELETE]} {
         ${log}::error "Send: HTTP method not recognized: '$verb'"
-        return 0
+        return -code error "Unknown HTTP method: $verb"
     }
 
-    dict incr SendCount $token
+    regexp {^(/(?:channels|guilds)/\d+)} $resource -> route
+    if {$route ne {}} {
+        if {![dict exists $SendCount $token $route]} {
+            dict set SendCount $token $route 0
+        }
+        set sendCount [dict get $SendCount $token $route]
+        if {$sendCount == 0} {
+            after [expr {$BurstLimitPeriod * 1000}] [list \
+                    dict set ::discord::rest::SendCount $token $route 0]
+        }
+        if {$sendCount >= $BurstLimitSend} {
+            ${log}::warn [join [list "Send: Reached $BurstLimitSend messages" \
+                    "sent in $BurstLimitPeriod s."]]
+            if {[llength $cmd] > 0} {
+                {*}$cmd {} "Local rate-limit"
+            }
+            return
+        }
+        if {[dict exists $RateLimits $token $route X-RateLimit-Remaining]} {
+            set remaining [dict get $RateLimits $token $route \
+                    X-RateLimit-Remaining]
+            if {$remaining <= 0} {
+                set resetTime [dict get $RateLimits $token $route \
+                        X-RateLimit-Reset]
+                set secsRemain [expr {$resetTime - [clock seconds]}]
+                puts "$secsRemain"
+                if {$secsRemain >= -3} {
+                    ${log}::warn [join [list "Send: Rate-limited on /$route," \
+                            "reset in $secsRemain seconds"]]
+                    return
+                }
+            }
+        }
+        dict set SendCount $token $route [incr sendCount]
+    }
+
     set sendId $SendId
     incr SendId
     set callbackName ::discord::rest::SendCallback${sendId}
