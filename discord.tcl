@@ -20,6 +20,9 @@ namespace eval discord {
     namespace ensemble create
 
     variable version 0.5.0
+    variable UserAgent "DiscordBot (discord.tcl, $version)"
+
+    ::http::config -useragent $UserAgent
 
     variable log [::logger::init discord]
     ${log}::setlevel debug
@@ -85,8 +88,6 @@ namespace eval discord {
     }
 }
 
-::http::config -useragent "DiscordBot (discord.tcl, ${::discord::version})"
-
 # discord::connect --
 #
 #       Starts a new session. Connects to the Discord Gateway, and update
@@ -128,7 +129,6 @@ proc discord::connect { token {cmd {}} {shardInfo {0 1}} } {
     set ${sessionNs}::dmChannels [dict create]
     set ${sessionNs}::users [dict create]
     set ${sessionNs}::channels [dict create]
-    set ${sessionNs}::log [::logger::init $sessionNs]
     set ${sessionNs}::callbacks $DefCallbacks
     return $sessionNs
 }
@@ -200,6 +200,7 @@ proc discord::setCallback { sessionNs event cmd } {
 proc discord::CreateSession { sessionNs } {
     namespace eval $sessionNs {
     }
+    set ${sessionNs}::log [::logger::init $sessionNs]
     return $sessionNs
 }
 
@@ -220,41 +221,48 @@ proc discord::DeleteSession { sessionNs } {
 
 # discord::GetGateway --
 #
-#       Retrieve the Gateway WebSocket Secure (wss) URL
+#       Retrieve the WebSocket Secure (wss) URL for the Discord Gateway API.
 #
 # Arguments:
-#       cached  Return a cached URL value if available, or else send a new
-#               request to Discord. Defaults to 1, meaning true.
+#       cached  If true, return a cached URL value if available, or else send a
+#               new request to retrieve one. Defaults to 1, meaning true.
 #
 # Results:
-#       Returns the Gateway wss URL string, or an empty string if an error
-#       occurred.
+#       Caches the Gateway API wss URL string in the variable GatewayUrl and
+#       returns the value. An error will be raised if the operation failed.
 
 proc discord::GetGateway { {cached 1} } {
     variable log
-    variable ApiBaseUrlV6
     variable GatewayUrl
-    if {$GatewayUrl ne "" && $cached} {
-        return $GatewayUrl
+    if {$cached} {
+        if {$GatewayUrl ne ""} {
+            ${log}::info "Using cached Gateway API wss URL."
+            return $GatewayUrl
+        } else {
+            ${log}::warn "No cached Gateway API wss URL."
+        }
     }
-    set reqUrl "${ApiBaseUrlV6}/gateway"
-    if {[catch {::http::geturl $reqUrl} token]} {
-        ${log}::error "GetGateway: $reqUrl: $token"
-        return ""
+    variable ApiBaseUrlV6
+    set url "${ApiBaseUrlV6}/gateway"
+    ${log}::info "Retrieving Gateway API wss URL from $url."
+    if {[catch {::http::geturl $url} token options]} {
+        ${log}::error $token
+        return -options $options $token
     }
-    set status [::http::code $token]
-    set body [::http::data $token]
+    upvar #0 $token state
+    set code [::http::code $token]
+    set ncode [::http::ncode $token]
+    set body $state(body)
+    set status $state(status)
     ::http::cleanup $token
-    if {![regexp -nocase ok $status]} {
-        ${log}::error "GetGateway: $reqUrl: $status"
-        return ""
+    if {$status ne "ok" || $ncode != 200} {
+        ${log}::error "$status: $code\n$body"
+        return -code error $ncode
     }
-    if {[catch {::json::json2dict $body} data]} {
-        ${log}::error "GetGateway: $data"
-        return ""
+    if {[catch {::json::json2dict $body} data options]} {
+        return -options $options $data
     }
-    set GatewayUrl [dict get $data url]
-    return $GatewayUrl
+    return [set GatewayUrl [dict get $data url]]
 }
 
 # discord::Every --

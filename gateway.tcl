@@ -114,8 +114,7 @@ namespace eval discord::gateway {
 #                   in total.
 #
 # Results:
-#       Returns the connection's WebSocket object if successful, an empty string
-#       otherwise.
+#       Returns a Websocket object if successful, or an empty string otherwise.
 
 proc discord::gateway::connect { token {cmd {}} {shardInfo {0 1}} } {
     variable log
@@ -123,10 +122,9 @@ proc discord::gateway::connect { token {cmd {}} {shardInfo {0 1}} } {
     variable DefHeartbeatInterval
     variable DefCompress
     variable EventCallbacks
-    set gateway [discord::GetGateway]
-    if {$gateway eq ""} {
+    if {[catch {discord::GetGateway} gateway options]} {
         ${log}::error "connect: Unable to get Gateway URL."
-        return ""
+        return -options $options
     }
     append gateway "/?v=${GatewayApiVer}&encoding=json"
     ${log}::notice "Connecting to the Gateway: $gateway"
@@ -134,15 +132,16 @@ proc discord::gateway::connect { token {cmd {}} {shardInfo {0 1}} } {
         ${log}::error "connect: $gateway: $sock"
         return ""
     }
-    SetConnectionInfo $sock connectCallback $cmd
-    SetConnectionInfo $sock eventCallbacks [dict get $EventCallbacks]
     SetConnectionInfo $sock defEventCallback \
             ::discord::gateway::EventCallbackStub
     SetConnectionInfo $sock sendCount 0
-    SetConnectionInfo $sock shard $shardInfo
     SetConnectionInfo $sock seq null
-    SetConnectionInfo $sock token $token
     SetConnectionInfo $sock session_id null
+    SetConnectionInfo $sock sock $sock
+    SetConnectionInfo $sock connectCallback $cmd
+    SetConnectionInfo $sock eventCallbacks [dict get $EventCallbacks]
+    SetConnectionInfo $sock shard $shardInfo
+    SetConnectionInfo $sock token $token
     SetConnectionInfo $sock heartbeat_interval $DefHeartbeatInterval
     SetConnectionInfo $sock compress $DefCompress
     return $sock
