@@ -21,6 +21,10 @@ set scriptDir [file dirname [info script]]
 lappend ::auto_path "$scriptDir/../"
 package require discord
 
+# Suppress all logging.
+
+${discord::log}::disable emergency
+
 test GetGateway-1.1 {Retrieve uncached URL, no cached URL} -body {
     discord::GetGateway 0
 } -cleanup {
@@ -63,9 +67,49 @@ test GetGateway-2.1 {Invalid base API URL} -setup {
     set discord::ApiBaseUrlV6 $originalUrl
 } -returnCodes error -result {Unsupported URL type "tcl"}
 
-# GetGateway-2.2 {nc listen on local port and close immediately upon connection}
+test GetGateway-2.2 {Request timeout} -setup {
+    set clients [list]
+    proc HandleClients { channel clientAddr clientPort } {
+        variable clients
+        lappend clients $channel
+        chan configure $channel -blocking 0 -buffering none
+        chan event $channel readable [list apply { { channel } {
+                    if {![chan eof $channel]} {
+                        chan gets $channel
+                    }
+                }} $channel]
+    }
+    set sock [socket -server HandleClients -myaddr localhost 0]
+    lassign [chan configure $sock -sockname] address hostname port
+    set discord::ApiBaseUrlV6 "http://${hostname}:$port"
+} -body {
+    if {[catch {discord::GetGateway 0 -timeout 1500} url options]} {
+        return -options $options $url
+    }
+} -cleanup {
+    set discord::ApiBaseUrlV6 $originalUrl
+    foreach channel $clients {
+        if {[llength [file channels $channel]] > 0} {
+            chan close $channel
+        }
+    }
+    chan close $sock
+} -returnCodes error -result timeout
 
-test GetGateway-2.3 {HTTP base API URL instead of HTTPS} -setup {
+test GetGateway-2.3 {Connection refused} -setup {
+    set sock [socket -server {} -myaddr localhost 0]
+    lassign [chan configure $sock -sockname] address hostname port
+    chan close $sock
+    set discord::ApiBaseUrlV6 "http://${hostname}:$port"
+} -body {
+    if {[catch {discord::GetGateway 0} url options]} {
+        return -options $options $url
+    }
+} -cleanup {
+    set discord::ApiBaseUrlV6 $originalUrl
+} -returnCodes error -result {connect failed connection refused}
+
+test GetGateway-2.4 {HTTP base API URL instead of HTTPS} -setup {
     set discord::ApiBaseUrlV6 [regsub {^https} $discord::ApiBaseUrlV6 http]
 } -body {
     discord::GetGateway
