@@ -25,13 +25,15 @@ package require discord
 
 ${discord::log}::disable emergency
 
+set testUrl "wss://discord.test"
+set originalUrl $discord::ApiBaseUrlV6
+
 test GetGateway-1.1 {Retrieve uncached URL, no cached URL} -body {
     discord::GetGateway 0
 } -cleanup {
     set discord::GatewayUrl ""
 } -match regexp -result {^wss://.+$} 
 
-set testUrl "wss://discord.test"
 test GetGateway-1.2 {Retrieve cached URL, has cached URL} -setup {
     set discord::GatewayUrl $testUrl
 } -body {
@@ -55,7 +57,6 @@ test GetGateway-1.4 {Retrieve cached URL, no cached URL} -body {
     set discord::GatewayUrl ""
 } -match regexp -result {^wss://.+$}
 
-set originalUrl $discord::ApiBaseUrlV6
 test GetGateway-2.1 {Invalid base API URL} -setup {
     set discord::ApiBaseUrlV6 "tcl://discord.tcl"
 } -body {
@@ -67,17 +68,16 @@ test GetGateway-2.1 {Invalid base API URL} -setup {
     set discord::ApiBaseUrlV6 $originalUrl
 } -returnCodes error -result {Unsupported URL type "tcl"}
 
-test GetGateway-2.2 {Request timeout} -setup {
+test GetGateway-2.2 {HTTP status timeout} -setup {
     set clients [list]
     proc HandleClients { channel clientAddr clientPort } {
-        variable clients
-        lappend clients $channel
+        lappend ::clients $channel
         chan configure $channel -blocking 0 -buffering none
         chan event $channel readable [list apply { { channel } {
                     if {![chan eof $channel]} {
                         chan gets $channel
                     }
-                }} $channel]
+                } } $channel]
     }
     set sock [socket -server HandleClients -myaddr localhost 0]
     lassign [chan configure $sock -sockname] address hostname port
@@ -97,6 +97,8 @@ test GetGateway-2.2 {Request timeout} -setup {
 } -returnCodes error -result timeout
 
 test GetGateway-2.3 {Connection refused} -setup {
+    # Connect to a port that is not opened by binding to it ourselves and then
+    # closing the socket.
     set sock [socket -server {} -myaddr localhost 0]
     lassign [chan configure $sock -sockname] address hostname port
     chan close $sock
@@ -117,3 +119,19 @@ test GetGateway-2.4 {HTTP base API URL instead of HTTPS} -setup {
     set discord::GatewayUrl ""
     set discord::ApiBaseUrlV6 $originalUrl
 } -returnCodes error -result 301
+
+test GetGateway-2.5 {HTTP status eof} -setup {
+    set sock [socket -server [list apply { { channel args } {
+                chan puts $channel {}
+                chan close $channel
+            } }] -myaddr localhost 0]
+    lassign [chan configure $sock -sockname] address hostname port
+    set discord::ApiBaseUrlV6 "http://${hostname}:$port"
+} -body {
+    if {[catch {discord::GetGateway} url options]} {
+        return -options $options $url
+    }
+} -cleanup {
+    set discord::ApiBaseUrlV6 $originalUrl
+    chan close $sock
+} -returnCodes error -result eof
