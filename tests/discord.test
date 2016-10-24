@@ -2,7 +2,7 @@
 #
 # discord.test --
 #
-#       This file contains tests commands in the root discord namespace.
+#       This file contains tests for commands in the root discord namespace.
 #       Sourcing this file into Tcl runs the tests and generates output for
 #       errors. No output means no errors were found.
 #
@@ -13,7 +13,6 @@
 
 package require tcltest
 namespace import tcltest::*
-verbose [list body error start usec]
 
 # Add parent directory to auto_path to load the discord package.
 
