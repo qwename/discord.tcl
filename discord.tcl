@@ -24,12 +24,10 @@ namespace eval discord {
 
     ::http::config -useragent $UserAgent
 
+    variable ApiBaseUrl "https://discordapp.com/api"
+
     variable log [::logger::init discord]
     ${log}::setlevel debug
-
-    variable ApiBaseUrl "https://discordapp.com/api"
-    variable ApiBaseUrlV6 "https://discordapp.com/api/v6"
-    variable GatewayUrl ""
 
     variable SessionId 0
     variable Sessions [dict create]
@@ -217,58 +215,6 @@ proc discord::CreateSession { sessionNs } {
 proc discord::DeleteSession { sessionNs } {
     [set ${sessionNs}::log]::delete
     namespace delete $sessionNs
-}
-
-# discord::GetGateway --
-#
-#       Retrieve the WebSocket Secure (wss) URL for the Discord Gateway API.
-#
-# Arguments:
-#       cached  If true, return a cached URL value if available, or else send a
-#               new request to retrieve one. Defaults to 1, meaning true.
-#       args    Additional arguments to be passed to http::geturl.
-#
-# Results:
-#       Caches the Gateway API wss URL string in the variable GatewayUrl and
-#       returns the value. An error will be raised if the request was
-#       unsuccessful, the returned body is not valid JSON, or if there is no
-#       "url" field in the object.
-
-proc discord::GetGateway { {cached 1} args } {
-    variable log
-    variable GatewayUrl
-    if {$cached} {
-        if {$GatewayUrl ne ""} {
-            ${log}::info "Using cached Gateway API wss URL."
-            return $GatewayUrl
-        } else {
-            ${log}::notice "No cached Gateway API wss URL."
-        }
-    }
-    variable ApiBaseUrlV6
-    set url "${ApiBaseUrlV6}/gateway"
-    ${log}::info "Retrieving Gateway API wss URL from $url."
-    if {[catch {::http::geturl $url {*}$args} token options]} {
-        ${log}::error $token
-        return -options $options $token
-    }
-    set ncode [::http::ncode $token]
-    upvar #0 $token state
-    set code $state(http)
-    set body $state(body)
-    set status $state(status)
-    ::http::cleanup $token
-    if {$status ne "ok"} {
-        ${log}::error "discord::GetGateway: $status"
-        return -code error $status
-    } elseif {$ncode != 200} {
-        ${log}::error "discord::GetGateway: $code\n$body"
-        return -code error $ncode
-    }
-    if {[catch {::json::json2dict $body} data options]} {
-        return -options $options $data
-    }
-    return [set GatewayUrl [dict get $data url]]
 }
 
 # discord::Every --

@@ -29,7 +29,10 @@ namespace eval discord::gateway {
     variable LogWsMsg 0
     variable MsgLogLevel debug
 
-    variable GatewayApiVer 6
+    variable GatewayApiVersion 6
+    variable GatewayApiEncoding json
+    variable GatewayResource /gateway
+    variable GatewayUrl ""
 
     variable LimitPeriod 60
     variable LimitSend 120
@@ -118,15 +121,16 @@ namespace eval discord::gateway {
 
 proc discord::gateway::connect { token {cmd {}} {shardInfo {0 1}} } {
     variable log
-    variable GatewayApiVer
+    variable GatewayApiVersion
+    variable GatewayApiEncoding
     variable DefHeartbeatInterval
     variable DefCompress
     variable EventCallbacks
-    if {[catch {discord::GetGateway} gateway options]} {
-        ${log}::error "connect: Unable to get Gateway URL."
-        return -options $options
+    if {[catch {GetGateway} gateway options]} {
+        ${log}::error "discord::gateway::connect: $gateway"
+        return -options $options $gateway
     }
-    append gateway "/?v=${GatewayApiVer}&encoding=json"
+    append gateway "/?v=${GatewayApiVersion}&encoding=$GatewayApiEncoding"
     ${log}::notice "Connecting to the Gateway: $gateway"
     if {[catch {::websocket::open $gateway ::discord::gateway::Handler} sock]} {
         ${log}::error "connect: $gateway: $sock"
@@ -254,6 +258,59 @@ proc discord::gateway::logWsMsg { on {level "debug"} } {
     }
     set MsgLogLevel $level
     return 1
+}
+
+# discord::gateway::GetGateway --
+#
+#       Retrieve the WebSocket Secure (wss) URL for the Discord Gateway API.
+#
+# Arguments:
+#       cached  If true, return a cached URL value if available, or else send a
+#               new request to retrieve one. Defaults to 1, meaning true.
+#       args    Additional arguments to be passed to http::geturl.
+#
+# Results:
+#       Caches the Gateway API wss URL string in the variable GatewayUrl and
+#       returns the value. An error will be raised if the request was
+#       unsuccessful, the returned body is not valid JSON, or if there is no
+#       "url" field in the object.
+
+proc discord::gateway::GetGateway { {cached 1} args } {
+    variable log
+    variable GatewayUrl
+    if {$cached} {
+        if {$GatewayUrl ne ""} {
+            ${log}::info "Using cached Gateway API wss URL."
+            return $GatewayUrl
+        } else {
+            ${log}::notice "No cached Gateway API wss URL."
+        }
+    }
+    variable GatewayApiVersion
+    variable GatewayResource
+    set url "${::discord::ApiBaseUrl}/v${GatewayApiVersion}$GatewayResource"
+    ${log}::info "Retrieving Gateway API wss URL from $url."
+    if {[catch {::http::geturl $url {*}$args} token options]} {
+        ${log}::error $token
+        return -options $options $token
+    }
+    set ncode [::http::ncode $token]
+    upvar #0 $token state
+    set code $state(http)
+    set body $state(body)
+    set status $state(status)
+    ::http::cleanup $token
+    if {$status ne "ok"} {
+        ${log}::error "discord::gateway::GetGateway: $status"
+        return -code error $status
+    } elseif {$ncode != 200} {
+        ${log}::error "discord::gateway::GetGateway: $code\n$body"
+        return -code error $ncode
+    }
+    if {[catch {::json::json2dict $body} data options]} {
+        return -options $options $data
+    }
+    return [set GatewayUrl [dict get $data url]]
 }
 
 # discord::gateway::Every --
