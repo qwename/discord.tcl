@@ -87,4 +87,5 @@ tclsh tests/discord.test
 - Find out why *zlib inflate* fails.
 - Local message cache using sqlite3/tdbc::sqlite3/tdbc::postgres package.
 - Use "return -code error -errorcode ..." when possible for standardized
-  exception handling.
+  exception handling. See ThrowError in websocket from tcllib for an example.
+- Create a tcltest custommatch to check -errorcode.
