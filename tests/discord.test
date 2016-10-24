@@ -135,3 +135,52 @@ test GetGateway-2.5 {HTTP status eof} -setup {
     set discord::ApiBaseUrlV6 $originalUrl
     chan close $sock
 } -returnCodes error -result eof
+
+test GetGateway-2.6 {Invalid JSON payload} -setup {
+    set sock [socket -server [list apply { { channel args } {
+                chan configure $channel -blocking 0 -buffering full
+                chan event $channel readable [list apply { { channel } {
+                            chan read $channel
+                            chan puts $channel [join {
+                                        {HTTP/1.1 200 OK}
+                                        {}
+                                        {Not JSON}
+                                    } "\r\n"]
+                            chan close $channel
+                        } } $channel]
+            } }] -myaddr localhost 0]
+    lassign [chan configure $sock -sockname] address hostname port
+    set discord::ApiBaseUrlV6 "http://${hostname}:$port"
+} -body {
+    if {[catch {discord::GetGateway} url options]} {
+        return -options $options $url
+    }
+} -cleanup {
+    set discord::ApiBaseUrlV6 $originalUrl
+    chan close $sock
+} -returnCodes error \
+    -result {unexpected token "END" at position 0; expecting VALUE}
+
+test GetGateway-2.7 {JSON payload with no url field} -setup {
+    set sock [socket -server [list apply { { channel args } {
+                chan configure $channel -blocking 0 -buffering full
+                chan event $channel readable [list apply { { channel } {
+                            chan read $channel
+                            chan puts $channel [join {
+                                        {HTTP/1.1 200 OK}
+                                        {}
+                                        {{"notUrl" : 1}}
+                                    } "\r\n"]
+                            chan close $channel
+                        } } $channel]
+            } }] -myaddr localhost 0]
+    lassign [chan configure $sock -sockname] address hostname port
+    set discord::ApiBaseUrlV6 "http://${hostname}:$port"
+} -body {
+    if {[catch {discord::GetGateway} url options]} {
+        return -options $options $url
+    }
+} -cleanup {
+    set discord::ApiBaseUrlV6 $originalUrl
+    chan close $sock
+} -returnCodes error -result {key "url" not known in dictionary}
