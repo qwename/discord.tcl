@@ -230,7 +230,9 @@ proc discord::DeleteSession { sessionNs } {
 #
 # Results:
 #       Caches the Gateway API wss URL string in the variable GatewayUrl and
-#       returns the value. An error will be raised if the operation failed.
+#       returns the value. An error will be raised if the request was
+#       unsuccessful, the returned body is not valid JSON, or if there is no
+#       "url" field in the object.
 
 proc discord::GetGateway { {cached 1} args } {
     variable log
