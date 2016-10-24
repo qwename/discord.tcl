@@ -257,9 +257,10 @@ proc discord::GetGateway { {cached 1} args } {
     set status $state(status)
     ::http::cleanup $token
     if {$status ne "ok"} {
+        ${log}::error "discord::GetGateway: $status"
         return -code error $status
     } elseif {$ncode != 200} {
-        ${log}::error "$code\n$body"
+        ${log}::error "discord::GetGateway: $code\n$body"
         return -code error $ncode
     }
     if {[catch {::json::json2dict $body} data options]} {
