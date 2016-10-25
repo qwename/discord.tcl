@@ -1,7 +1,9 @@
 # local_server.tcl --
 #
 #       This file contains a basic implementation of a HTTP(S)/WS(S) server that
-#       is intended to aid in testing the library procedures.
+#       is intended to aid in testing the library procedures. If this file is
+#       executed on its own, a local server will be created with the command
+#       LocalServerSetupAll.
 #
 # Copyright (c) 2016, Yixin Zhang
 #
@@ -316,6 +318,8 @@ proc ::LocalServerCleanupAll { pids files channel url } {
     ${log}::info "LocalServerCleanupAll complete."
     return
 }
+
+# If we are running on our own.
 
 if {[info script] eq $argv0} {
     lassign $argv timeout
