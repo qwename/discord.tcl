@@ -71,8 +71,8 @@ E.g.
 tclsh tests/gateway.test
 ```
 
-The file local\_server.tcl contains procedures for setting up a local HTTP(S)
-server. The main proc is LocalServerSetupAll.
+The file [local\_server.tcl](/tests/local_server.tcl) contains procedures for
+setting up a local HTTP(S) server. The main proc is LocalServerSetupAll.
 
 ### Links
 
@@ -88,7 +88,8 @@ server. The main proc is LocalServerSetupAll.
 - Test cases for "pure" procs, send HTTP requests to test both HTTP responses
   and Gateway events.
 - Find out why *zlib inflate* fails.
-- Local message cache using sqlite3/tdbc::sqlite3/tdbc::postgres package.
+- ~Local message cache using sqlite3/tdbc::sqlite3/tdbc::postgres package.~
+  Leave message logging up to library users.
 - Use "return -code error -errorcode ..." when possible for standardized
   exception handling. See ThrowError in websocket from tcllib for an example.
 - Use the *try* command.
