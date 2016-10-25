@@ -40,6 +40,7 @@ if {$apiBaseUrl eq {}} {
     set apiBaseUrl $::discord::ApiBaseUrl
 }
 
+# outputVar will contain the local server URL.
 proc StartLocalServer { outputVar {timeout {3000}} {protocol https} \
         {scripts {}} args } {
     variable localServerScript
@@ -52,20 +53,12 @@ proc StartLocalServer { outputVar {timeout {3000}} {protocol https} \
                 }
                 chan close $rdPipe
                 chan close $wrPipe
-                set ::forever 1
             } } $outputVar $rdPipe $wrPipe]
     exec {*}[auto_execok tclsh] $localServerScript $timeout $protocol {} \
             $scripts $args >@ $wrPipe &
 }
 
 test GetGateway-1.1 {Retrieve uncached URL, no cached URL} -setup {
-    set readScript [list apply { { channel } {
-                if {![chan eof $channel]} {
-                    puts "Read: '[chan read $channel]'"
-                } else {
-                    chan close $channel
-                }
-            } }]
     set writeScript [list apply { {url channel } {
                 chan puts $channel [join [list \
                         "HTTP/1.1 200 OK" \
@@ -73,11 +66,9 @@ test GetGateway-1.1 {Retrieve uncached URL, no cached URL} -setup {
                         "\{\"url\":\"$url\"\}"] "\r\n"]
                 chan close $channel
             } } $testUrl]
-    set scripts [list $readScript $writeScript]
-    set args [list -blocking 0 -buffering full]
-    StartLocalServer url 1000 https $scripts $args
-    vwait ::forever
-    unset ::forever
+    set scripts [list {} $writeScript]
+    StartLocalServer url 1000 https $scripts -blocking 0 -buffering full
+    vwait url
     set ::discord::ApiBaseUrl $url
 } -body {
     ::discord::gateway::GetGateway 0
@@ -103,11 +94,24 @@ test GetGateway-1.3 {Retrieve uncached URL, has cached URL} -setup {
     set discord::gateway::GatewayUrl ""
 } -result 1
 
-test GetGateway-1.4 {Retrieve cached URL, no cached URL} -body {
+test GetGateway-1.4 {Retrieve cached URL, no cached URL} -setup {
+    set writeScript [list apply { {url channel } {
+                chan puts $channel [join [list \
+                        "HTTP/1.1 200 OK" \
+                        "" \
+                        "\{\"url\":\"$url\"\}"] "\r\n"]
+                chan close $channel
+            } } $testUrl]
+    set scripts [list {} $writeScript]
+    StartLocalServer url 1000 https $scripts -blocking 0 -buffering full
+    vwait url
+    set ::discord::ApiBaseUrl $url
+} -body {
     discord::gateway::GetGateway
 } -cleanup {
     set discord::gateway::GatewayUrl ""
-} -match regexp -result {^wss://.+$}
+    set ::discord::ApiBaseUrl $originalUrl
+} -match regexp -result $testUrl
 
 test GetGateway-2.1 {Invalid base API URL} -setup {
     set discord::ApiBaseUrl "tcl://discord.tcl"
