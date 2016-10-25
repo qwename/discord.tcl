@@ -68,8 +68,11 @@ namespace procedures.
 
 E.g.
 ```
-tclsh tests/discord.test
+tclsh tests/gateway.test
 ```
+
+The file local\_server.tcl contains procedures for setting up a local HTTP(S)
+server. The main proc is LocalServerSetupAll.
 
 ### Links
 
@@ -88,4 +91,6 @@ tclsh tests/discord.test
 - Local message cache using sqlite3/tdbc::sqlite3/tdbc::postgres package.
 - Use "return -code error -errorcode ..." when possible for standardized
   exception handling. See ThrowError in websocket from tcllib for an example.
+- Use the *try* command.
 - Create a tcltest custommatch to check -errorcode.
+- Test HTTP API and Gateway API with local server.
