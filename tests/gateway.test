@@ -59,9 +59,7 @@ test GetGateway-1.4 {Retrieve cached URL, no cached URL} -body {
 test GetGateway-2.1 {Invalid base API URL} -setup {
     set discord::ApiBaseUrl "tcl://discord.tcl"
 } -body {
-    if {[catch {discord::gateway::GetGateway} url options]} {
-        return -options $options $url
-    }
+    discord::gateway::GetGateway
 } -cleanup {
     set discord::gateway::GatewayUrl ""
     set discord::ApiBaseUrl $originalUrl
@@ -82,9 +80,7 @@ test GetGateway-2.2 {HTTP status timeout} -setup {
     lassign [chan configure $sock -sockname] address hostname port
     set discord::ApiBaseUrl "http://${hostname}:$port"
 } -body {
-    if {[catch {discord::gateway::GetGateway 0 -timeout 1500} url options]} {
-        return -options $options $url
-    }
+    discord::gateway::GetGateway 0 -timeout 1500
 } -cleanup {
     set discord::ApiBaseUrl $originalUrl
     foreach channel $clients {
@@ -103,9 +99,7 @@ test GetGateway-2.3 {Connection refused} -setup {
     chan close $sock
     set discord::ApiBaseUrl "http://${hostname}:$port"
 } -body {
-    if {[catch {discord::gateway::GetGateway 0} url options]} {
-        return -options $options $url
-    }
+    discord::gateway::GetGateway 0
 } -cleanup {
     set discord::ApiBaseUrl $originalUrl
 } -returnCodes error -result {connect failed connection refused}
@@ -127,9 +121,7 @@ test GetGateway-2.5 {HTTP status eof} -setup {
     lassign [chan configure $sock -sockname] address hostname port
     set discord::ApiBaseUrl "http://${hostname}:$port"
 } -body {
-    if {[catch {discord::gateway::GetGateway} url options]} {
-        return -options $options $url
-    }
+    discord::gateway::GetGateway
 } -cleanup {
     set discord::ApiBaseUrl $originalUrl
     chan close $sock
@@ -151,9 +143,7 @@ test GetGateway-2.6 {Invalid JSON payload} -setup {
     lassign [chan configure $sock -sockname] address hostname port
     set discord::ApiBaseUrl "http://${hostname}:$port"
 } -body {
-    if {[catch {discord::gateway::GetGateway} url options]} {
-        return -options $options $url
-    }
+    discord::gateway::GetGateway
 } -cleanup {
     set discord::ApiBaseUrl $originalUrl
     chan close $sock
@@ -176,9 +166,7 @@ test GetGateway-2.7 {JSON payload with no url field} -setup {
     lassign [chan configure $sock -sockname] address hostname port
     set discord::ApiBaseUrl "http://${hostname}:$port"
 } -body {
-    if {[catch {discord::gateway::GetGateway} url options]} {
-        return -options $options $url
-    }
+    discord::gateway::GetGateway
 } -cleanup {
     set discord::ApiBaseUrl $originalUrl
     chan close $sock
