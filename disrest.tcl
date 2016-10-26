@@ -55,7 +55,6 @@ proc discord::rest::Send { token verb resource {data {}} {cmd {}} args } {
     variable SendCount
     variable BurstLimitSend
     variable BurstLimitPeriod
-    global discord::ApiBaseUrlV6
 
     if {$verb ni [list GET POST PUT PATCH DELETE]} {
         ${log}::error "Send: HTTP method not recognized: '$verb'"
@@ -107,7 +106,7 @@ proc discord::rest::Send { token verb resource {data {}} {cmd {}} args } {
     dict for {field value} $data {
         lappend body $field $value
     }
-    set url "${ApiBaseUrlV6}${resource}"
+    set url "${::discord::ApiBaseUrl}${resource}"
     dict set SendInfo $sendId [dict create cmd $cmd url $url token $token \
             route $route]
     set command [list ::http::geturl $url \
