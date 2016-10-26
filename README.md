@@ -95,3 +95,5 @@ setting up a local HTTP(S) server. The main proc is LocalServerSetupAll.
 - Use the *try* command.
 - Create a tcltest custommatch to check -errorcode.
 - Test HTTP API and Gateway API with local server.
+- Change disrest::Send to send JSON payload without http::formatQuery.
+  json::dict2json doesn't work as expected, so types have to be stored.
