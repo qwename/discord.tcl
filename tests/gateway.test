@@ -6,10 +6,6 @@
 #       Sourcing this file into Tcl runs the tests and generates output for
 #       errors. No output means no errors were found.
 #
-# Arguments:
-#       apiBaseUrl  (optional) URL to connect to for retrieving the Gateway API
-#                   URL. Defaults to the variable discord::ApiBaseUrl.
-#
 # Copyright (c) 2016, Yixin Zhang
 #
 # See the file "LICENSE" for information on usage and redistribution of this
@@ -17,6 +13,9 @@
 
 package require tcltest
 namespace import tcltest::*
+
+;# Uncomment the next line to show more verbose output.
+;#verbose [list body error start usec]
 
 set scriptDir [file dirname [info script]]
 
@@ -33,12 +32,6 @@ source $localServerScript
 ${discord::gateway::log}::disable emergency
 
 set testUrl "wss://discord.test"
-set originalUrl $discord::ApiBaseUrl
-
-lassign $argv apiBaseUrl
-if {$apiBaseUrl eq {}} {
-    set apiBaseUrl $::discord::ApiBaseUrl
-}
 
 # outputVar will contain the local server URL.
 proc StartLocalServer { outputVar {timeout {3000}} {protocol https} \
@@ -67,31 +60,30 @@ test GetGateway-1.1 {Retrieve uncached URL, no cached URL} -setup {
                 chan close $channel
             } } $testUrl]
     set scripts [list {} $writeScript]
-    StartLocalServer url 1000 https $scripts -blocking 0 -buffering full
-    vwait url
-    set ::discord::ApiBaseUrl $url
+    set baseUrl ""
+    StartLocalServer baseUrl 1000 https $scripts -blocking 0 -buffering full
+    vwait baseUrl
 } -body {
-    ::discord::gateway::GetGateway 0
+    ::discord::gateway::GetGateway $baseUrl 0
 } -cleanup {
-    set ::discord::gateway::GatewayUrl ""
-    set ::discord::ApiBaseUrl $originalUrl
+    set discord::gateway::CachedGatewayUrls [dict create]
 } -result $testUrl
 
 test GetGateway-1.2 {Retrieve cached URL, has cached URL} -setup {
-    set discord::gateway::GatewayUrl $testUrl
+    dict set discord::gateway::CachedGatewayUrls $discord::ApiBaseUrl $testUrl
 } -body {
-    discord::gateway::GetGateway
+    discord::gateway::GetGateway $discord::ApiBaseUrl
 } -cleanup {
-    set discord::gateway::GatewayUrl ""
+    set discord::gateway::CachedGatewayUrls [dict create]
 } -result $testUrl
 
 test GetGateway-1.3 {Retrieve uncached URL, has cached URL} -setup {
-    set discord::gateway::GatewayUrl $testUrl
+    dict set discord::gateway::CachedGatewayUrls $discord::ApiBaseUrl $testUrl
 } -body {
-    set url [discord::gateway::GetGateway 0]
+    set url [discord::gateway::GetGateway $discord::ApiBaseUrl 0]
     return [expr {$url ne $testUrl}]
 } -cleanup {
-    set discord::gateway::GatewayUrl ""
+    set discord::gateway::CachedGatewayUrls [dict create]
 } -result 1
 
 test GetGateway-1.4 {Retrieve cached URL, no cached URL} -setup {
@@ -103,23 +95,19 @@ test GetGateway-1.4 {Retrieve cached URL, no cached URL} -setup {
                 chan close $channel
             } } $testUrl]
     set scripts [list {} $writeScript]
-    StartLocalServer url 1000 https $scripts -blocking 0 -buffering full
-    vwait url
-    set ::discord::ApiBaseUrl $url
+    set baseUrl ""
+    StartLocalServer baseUrl 1000 https $scripts -blocking 0 -buffering full
+    vwait baseUrl
 } -body {
-    discord::gateway::GetGateway
+    discord::gateway::GetGateway $baseUrl
 } -cleanup {
-    set discord::gateway::GatewayUrl ""
-    set ::discord::ApiBaseUrl $originalUrl
+    set discord::gateway::CachedGatewayUrls [dict create]
 } -match regexp -result $testUrl
 
-test GetGateway-2.1 {Invalid base API URL} -setup {
-    set discord::ApiBaseUrl "tcl://discord.tcl"
-} -body {
-    discord::gateway::GetGateway
+test GetGateway-2.1 {Unsupported base API URL type} -body {
+    discord::gateway::GetGateway "tcl://discord.tcl"
 } -cleanup {
-    set discord::gateway::GatewayUrl ""
-    set discord::ApiBaseUrl $originalUrl
+    set discord::gateway::CachedGatewayUrls [dict create]
 } -returnCodes error -result {Unsupported URL type "tcl"}
 
 test GetGateway-2.2 {HTTP status timeout} -setup {
@@ -135,11 +123,9 @@ test GetGateway-2.2 {HTTP status timeout} -setup {
     }
     set sock [socket -server HandleClients -myaddr localhost 0]
     lassign [chan configure $sock -sockname] address hostname port
-    set discord::ApiBaseUrl "http://${hostname}:$port"
 } -body {
-    discord::gateway::GetGateway 0 -timeout 1500
+    discord::gateway::GetGateway "http://$hostname:$port" 0 -timeout 1500
 } -cleanup {
-    set discord::ApiBaseUrl $originalUrl
     foreach channel $clients {
         if {[llength [file channels $channel]] > 0} {
             chan close $channel
@@ -154,20 +140,15 @@ test GetGateway-2.3 {Connection refused} -setup {
     set sock [socket -server {} -myaddr localhost 0]
     lassign [chan configure $sock -sockname] address hostname port
     chan close $sock
-    set discord::ApiBaseUrl "http://${hostname}:$port"
 } -body {
-    discord::gateway::GetGateway 0
+    discord::gateway::GetGateway "http://$hostname:$port" 0
 } -cleanup {
-    set discord::ApiBaseUrl $originalUrl
 } -returnCodes error -result {connect failed connection refused}
 
-test GetGateway-2.4 {HTTP base API URL instead of HTTPS} -setup {
-    set discord::ApiBaseUrl [regsub {^https} $discord::ApiBaseUrl http]
-} -body {
-    discord::gateway::GetGateway
+test GetGateway-2.4 {HTTP base API URL instead of HTTPS} -body {
+    discord::gateway::GetGateway [regsub {^https} $discord::ApiBaseUrl http]
 } -cleanup {
-    set discord::gateway::GatewayUrl ""
-    set discord::ApiBaseUrl $originalUrl
+    set discord::gateway::CachedGatewayUrls [dict create]
 } -returnCodes error -result 301
 
 test GetGateway-2.5 {HTTP status eof} -setup {
@@ -176,11 +157,9 @@ test GetGateway-2.5 {HTTP status eof} -setup {
                 chan close $channel
             } }] -myaddr localhost 0]
     lassign [chan configure $sock -sockname] address hostname port
-    set discord::ApiBaseUrl "http://${hostname}:$port"
 } -body {
-    discord::gateway::GetGateway
+    discord::gateway::GetGateway "http://$hostname:$port"
 } -cleanup {
-    set discord::ApiBaseUrl $originalUrl
     chan close $sock
 } -returnCodes error -result eof
 
@@ -198,11 +177,9 @@ test GetGateway-2.6 {Invalid JSON payload} -setup {
                         } } $channel]
             } }] -myaddr localhost 0]
     lassign [chan configure $sock -sockname] address hostname port
-    set discord::ApiBaseUrl "http://${hostname}:$port"
 } -body {
-    discord::gateway::GetGateway
+    discord::gateway::GetGateway "http://$hostname:$port"
 } -cleanup {
-    set discord::ApiBaseUrl $originalUrl
     chan close $sock
 } -returnCodes error \
     -result {unexpected token "END" at position 0; expecting VALUE}
@@ -221,10 +198,8 @@ test GetGateway-2.7 {JSON payload with no url field} -setup {
                         } } $channel]
             } }] -myaddr localhost 0]
     lassign [chan configure $sock -sockname] address hostname port
-    set discord::ApiBaseUrl "http://${hostname}:$port"
 } -body {
-    discord::gateway::GetGateway
+    discord::gateway::GetGateway "http://$hostname:$port"
 } -cleanup {
-    set discord::ApiBaseUrl $originalUrl
     chan close $sock
-} -returnCodes error -result {key "url" not known in dictionary}
+} -returnCodes error -result {"url" field not found in JSON object.}
