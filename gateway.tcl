@@ -32,7 +32,7 @@ namespace eval discord::gateway {
     variable GatewayApiVersion 6
     variable GatewayApiEncoding json
     variable GatewayResource /gateway
-    variable GatewayUrl ""
+    variable CachedGatewayUrls [dict create]
 
     variable LimitPeriod 60
     variable LimitSend 120
@@ -126,12 +126,12 @@ proc discord::gateway::connect { token {cmd {}} {shardInfo {0 1}} } {
     variable DefHeartbeatInterval
     variable DefCompress
     variable EventCallbacks
-    if {[catch {GetGateway} gateway options]} {
-        ${log}::error "discord::gateway::connect: $gateway"
+    if {[catch {GetGateway $::discord::ApiBaseUrl} gateway options]} {
+        ${log}::error "connect: $gateway"
         return -options $options $gateway
     }
     append gateway "/?v=${GatewayApiVersion}&encoding=$GatewayApiEncoding"
-    ${log}::notice "Connecting to the Gateway: $gateway"
+    ${log}::notice "connect: $gateway"
     if {[catch {::websocket::open $gateway ::discord::gateway::Handler} sock]} {
         ${log}::error "connect: $gateway: $sock"
         return ""
@@ -265,8 +265,9 @@ proc discord::gateway::logWsMsg { on {level "debug"} } {
 #       Retrieve the WebSocket Secure (wss) URL for the Discord Gateway API.
 #
 # Arguments:
+#       baseUrl Base URL for Discord API.
 #       cached  If true, return a cached URL value if available, or else send a
-#               new request to retrieve one. Defaults to 1, meaning true.
+#               new request to retrieve one. Defaults to true.
 #       args    Additional arguments to be passed to http::geturl.
 #
 # Results:
@@ -275,21 +276,21 @@ proc discord::gateway::logWsMsg { on {level "debug"} } {
 #       unsuccessful, the returned body is not valid JSON, or if there is no
 #       "url" field in the object.
 
-proc discord::gateway::GetGateway { {cached 1} args } {
+proc discord::gateway::GetGateway { baseUrl {cached true} args } {
     variable log
-    variable GatewayUrl
-    if {$cached} {
-        if {$GatewayUrl ne ""} {
-            ${log}::info "Using cached Gateway API wss URL."
-            return $GatewayUrl
+    variable CachedGatewayUrls
+    if {[string is true -strict $cached]} {
+        if {[dict exists $CachedGatewayUrls $baseUrl]} {
+            ${log}::info "GetGateway: Using cached Gateway API URL for $baseUrl"
+            return [dict get $CachedGatewayUrls $baseUrl]
         } else {
-            ${log}::notice "No cached Gateway API wss URL."
+            ${log}::notice "GetGateway: No cached Gateway API URL for $baseUrl"
         }
     }
     variable GatewayApiVersion
     variable GatewayResource
-    set url "${::discord::ApiBaseUrl}/v${GatewayApiVersion}$GatewayResource"
-    ${log}::info "Retrieving Gateway API wss URL from $url."
+    set url "$baseUrl/v${GatewayApiVersion}$GatewayResource"
+    ${log}::info "GetGateway: Retrieving Gateway API URL from $url"
     if {[catch {::http::geturl $url {*}$args} token options]} {
         ${log}::error $token
         return -options $options $token
@@ -301,16 +302,23 @@ proc discord::gateway::GetGateway { {cached 1} args } {
     set status $state(status)
     ::http::cleanup $token
     if {$status ne "ok"} {
-        ${log}::error "discord::gateway::GetGateway: $status"
+        ${log}::error "GetGateway: $status"
         return -code error $status
     } elseif {$ncode != 200} {
-        ${log}::error "discord::gateway::GetGateway: $code\n$body"
+        ${log}::error "GetGateway: $code\n$body"
         return -code error $ncode
     }
     if {[catch {::json::json2dict $body} data options]} {
+        ${log}::error "GetGateway: JSON parsing failed, body:\n$body"
         return -options $options $data
     }
-    return [set GatewayUrl [dict get $data url]]
+    if {![dict exists $data url]} {
+        return -code error "\"url\" field not found in JSON object."
+    }
+    set gatewayUrl [dict get $data url]
+    dict set CachedGatewayUrls $baseUrl $gatewayUrl
+    ${log}::info "GetGateway: Cached Gateway API URL for $baseUrl: $gatewayUrl"
+    return $gatewayUrl
 }
 
 # discord::gateway::Every --
