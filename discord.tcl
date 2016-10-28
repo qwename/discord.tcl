@@ -30,7 +30,6 @@ namespace eval discord {
     ${log}::setlevel debug
 
     variable SessionId 0
-    variable Sessions [dict create]
 
     variable DefCallbacks {
         READY                       {}
