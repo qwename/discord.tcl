@@ -186,7 +186,7 @@ proc discord::callback::event::Guild { sessionNs event data } {
 
 proc discord::callback::event::GuildBan { sessionNs event data } {
     set log [set ${sessionNs}::log]
-    set id [dict get $data id]
+    set user [dict get $data user]
     set guildId [dict get $data guild_id]
     switch $event {
 
@@ -197,7 +197,7 @@ proc discord::callback::event::GuildBan { sessionNs event data } {
         GUILD_BAN_REMOVE {
             set guildName [dict get [set ${sessionNs}::guilds] $guildId name]
             foreach field {username discriminator} {
-                set $field [dict get $data $field]
+                set $field [dict get $user $field]
             }
             ${log}::debug [join [list "$event '$guildName' ($guildId):" \
                     "${username}#$discriminator ($id)"]]
