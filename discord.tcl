@@ -104,18 +104,18 @@ namespace eval discord {
 #
 # Results:
 #       Returns the name of a namespace that is created for the session if the
-#       connection is sucessful, and an empty string otherwise.
+#       connection is sucessful, or an empty string otherwise.
 
 proc discord::connect { token {cmd {}} {shardInfo {0 1}} } {
     variable log
-    variable DefCallbacks
     set sessionNs [CreateSession]
-    set sock [gateway::connect $token \
-            [list ::discord::SetupEventCallbacks $cmd $sessionNs] $shardInfo]
-    if {$sock eq ""} {
-        return ""
+    if {[catch {gateway::connect $token [list ::discord::SetupEventCallbacks \
+            $cmd $sessionNs] $shardInfo} gatewayNs options]} {
+        ${log}::error "connect: $gatewayNs"
+        return -options $options $gatewayNs
     }
-    set ${sessionNs}::sock $sock
+    variable DefCallbacks
+    set ${sessionNs}::gatewayNs $gatewayNs
     set ${sessionNs}::token $token
     set ${sessionNs}::self [dict create]
     set ${sessionNs}::guilds [dict create]
@@ -134,17 +134,16 @@ proc discord::connect { token {cmd {}} {shardInfo {0 1}} } {
 #       sessionNs   Session namespace returned from discord::connect
 #
 # Results:
-#       Deletes the session namespace. Returns 1 if sessionNs is valid, and 0
-#       otherwise.
+#       Deletes the session namespace. Raises an error if the namespace does not
+#       exist.
 
 proc discord::disconnect { sessionNs } {
     variable log
     if {![namespace exists $sessionNs]} {
-        ${log}::error "disconnect: Unknown session: '$sessionNs'"
-        return 0
+        return -code error "Unknown session: $sessionNs"
     }
 
-    if {[catch {gateway::disconnect [set ${sessionNs}::sock]} res]} {
+    if {[catch {gateway::disconnect [set ${sessionNs}::gatewayNs]} res]} {
         ${log}::error "disconnect: $res"
     }
     DeleteSession $sessionNs
@@ -166,7 +165,7 @@ proc discord::disconnect { sessionNs } {
 #                   empty string to unregister a callback.
 #
 # Results:
-#       Returns 1 if the event is supported, 0 otherwise.
+#       Returns 1 if the event is supported, or 0 otherwise.
 
 proc discord::setCallback { sessionNs event cmd } {
     variable log

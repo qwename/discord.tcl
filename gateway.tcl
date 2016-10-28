@@ -38,6 +38,9 @@ namespace eval discord::gateway {
     variable LimitSend 120
     variable LimitStatusChange 5
 
+    variable GatewayId 0
+    variable Gateways [dict create]
+
     variable EventCallbacks {
         READY                       {}
         RESUME                      {}
@@ -76,7 +79,6 @@ namespace eval discord::gateway {
     variable DefCompress false
 
     variable DefHeartbeatInterval 10000
-    variable Sockets [dict create]
 
     variable OpTokens {
         0   DISPATCH
@@ -117,38 +119,43 @@ namespace eval discord::gateway {
 #                   in total.
 #
 # Results:
-#       Returns a Websocket object if successful, or an empty string otherwise.
+#       Returns the name of a namespace that is created for the session if the
+#       connection is successful. An error will be raised if retrieving the
+#       Gateway API URL failed, or connecting to the WebSocket server failed.
 
 proc discord::gateway::connect { token {cmd {}} {shardInfo {0 1}} } {
     variable log
-    variable GatewayApiVersion
-    variable GatewayApiEncoding
-    variable DefHeartbeatInterval
-    variable DefCompress
-    variable EventCallbacks
     if {[catch {GetGateway $::discord::ApiBaseUrl} gateway options]} {
         ${log}::error "connect: $gateway"
         return -options $options $gateway
     }
+    variable GatewayApiVersion
+    variable GatewayApiEncoding
     append gateway "/?v=${GatewayApiVersion}&encoding=$GatewayApiEncoding"
     ${log}::notice "connect: $gateway"
-    if {[catch {::websocket::open $gateway ::discord::gateway::Handler} sock]} {
+    if {[catch {::websocket::open $gateway ::discord::gateway::Handler} \
+            sock options]} {
         ${log}::error "connect: $gateway: $sock"
-        return ""
+        return -options $options $sock
     }
-    SetConnectionInfo $sock defEventCallback \
-            ::discord::gateway::EventCallbackStub
-    SetConnectionInfo $sock sendCount 0
-    SetConnectionInfo $sock seq null
-    SetConnectionInfo $sock session_id null
-    SetConnectionInfo $sock sock $sock
-    SetConnectionInfo $sock connectCallback $cmd
-    SetConnectionInfo $sock eventCallbacks [dict get $EventCallbacks]
-    SetConnectionInfo $sock shard $shardInfo
-    SetConnectionInfo $sock token $token
-    SetConnectionInfo $sock heartbeat_interval $DefHeartbeatInterval
-    SetConnectionInfo $sock compress $DefCompress
-    return $sock
+    variable Gateways
+    variable DefHeartbeatInterval
+    variable DefCompress
+    variable EventCallbacks
+    set gatewayNs [CreateGateway]
+    dict set Gateways $sock $gatewayNs
+    set ${gatewayNs}::sock $sock
+    set ${gatewayNs}::defEventCallback ::discord::gateway::EventCallbackStub
+    set ${gatewayNs}::sendCount 0
+    set ${gatewayNs}::seq null
+    set ${gatewayNs}::session_id null
+    set ${gatewayNs}::connectCallback $cmd
+    set ${gatewayNs}::eventCallbacks [dict get $EventCallbacks]
+    set ${gatewayNs}::shard $shardInfo
+    set ${gatewayNs}::token $token
+    set ${gatewayNs}::heartbeat_interval $DefHeartbeatInterval
+    set ${gatewayNs}::compress $DefCompress
+    return $gatewayNs
 }
 
 # discord::gateway::disconnect --
@@ -156,20 +163,25 @@ proc discord::gateway::connect { token {cmd {}} {shardInfo {0 1}} } {
 #       Disconnect from the Gateway.
 #
 # Arguments:
-#       sock    WebSocket object.
+#       gatewayNs   Gateway namespace returned from discord::gateway::connect.
 #
 # Results:
-#       None.
+#       Deletes the gateway namespace. Returns 1 if gatewayNs is valid, or 0
+#       otherwise.
 
-proc discord::gateway::disconnect { sock } {
-    ${::discord::gateway::log}::notice "Disconnecting from the Gateway."
+proc discord::gateway::disconnect { gatewayNs } {
+    variable log
+    if {![namespace exists $gatewayNs]} {
+        return -code error "Unknown gateway: $gatewayNs"
+    }
+    ${log}::notice "Disconnecting from the Gateway."
 
 # Manually construct the Close frame body, as the websocket library's close
 # procedure does not actually send anything as of version 1.4.
 
 	set msg [binary format Su 1000]
 	set msg [string range $msg 0 124];
-	::websocket::send $sock 8 $msg
+	::websocket::send [set ${gatewayNs}::sock] 8 $msg
     return
 }
 
@@ -191,17 +203,17 @@ proc discord::gateway::disconnect { sock } {
 #               Set this to the empty string to unregister a callback.
 #
 # Results:
-#       Returns 1 if the event is supported, 0 otherwise.
+#       Returns 1 if the event is supported, or 0 otherwise.
 
 proc discord::gateway::setCallback { sock event cmd } {
     variable log
-    set eventCallbacks [GetConnectionInfo $sock eventCallbacks]
+    set eventCallbacks [GetGatewayInfo $sock eventCallbacks]
     if {![dict exists $eventCallbacks $event]} {
         ${log}::error "Event not recognized: '$event'"
         return 0
     } else {
         dict set eventCallbacks $event $cmd
-        SetConnectionInfo $sock eventCallbacks $eventCallbacks
+        SetGatewayInfo $sock eventCallbacks $eventCallbacks
         ${log}::debug "Registered callback for event '$event': $cmd"
         return 1
     }
@@ -224,11 +236,11 @@ proc discord::gateway::setCallback { sock event cmd } {
 #               Set this to the empty string to unregister a callback.
 #
 # Results:
-#       Returns 1 if the event is supported, 0 otherwise.
+#       Returns 1 if the event is supported, or 0 otherwise.
 
 proc discord::gateway::setDefaultCallback { sock cmd } {
     variable log
-    SetConnectionInfo $sock defEventCallback $cmd
+    SetGatewayInfo $sock defEventCallback $cmd
     ${log}::debug "Registered default event callback: $cmd"
 }
 
@@ -243,7 +255,7 @@ proc discord::gateway::setDefaultCallback { sock cmd } {
 #               Defaults to debug.
 #
 # Results:
-#       Returns 1 if changes were made, 0 otherwise.
+#       Returns 1 if changes were made, or 0 otherwise.
 
 proc discord::gateway::logWsMsg { on {level "debug"} } {
     variable LogWsMsg
@@ -321,6 +333,41 @@ proc discord::gateway::GetGateway { baseUrl {cached true} args } {
     return $gatewayUrl
 }
 
+# discord::gateway::CreateGateway --
+#
+#       Create a namespace for a gateway.
+#
+# Arguments:
+#       None.
+#
+# Results:
+#       Creates a namespace specific to a gateway. Returns the namespace name.
+
+proc discord::gateway::CreateGateway { } {
+    variable GatewayId
+    set gatewayNs ::discord::gateway::gateway::$GatewayId
+    incr GatewayId
+    namespace eval $gatewayNs {
+    }
+    set ${gatewayNs}::log [::logger::init $gatewayNs]
+    return $gatewayNs
+}
+
+# discord::gateway::DeleteGateway --
+#
+#       Delete a gateway namespace
+#
+# Arguments:
+#       gatewayNs   Name of fully-qualified namespace to delete.
+#
+# Results:
+#       None.
+
+proc discord::gateway::DeleteGateway { gatewayNs } {
+    [set ${gatewayNs}::log]::delete
+    namespace delete $gatewayNs
+}
+
 # discord::gateway::Every --
 #
 #       Run a command periodically at the specified interval. Allows
@@ -348,35 +395,37 @@ proc discord::gateway::Every {interval script} {
     return $afterId
 }
 
-# discord::gateway::GetConnectionInfo --
+# discord::gateway::GetGatewayInfo --
 #
 #       Get a detail of the Gateway connection.
 #
 # Arguments:
 #       sock    WebSocket object.
-#       what    Name of the connection detail to return.
+#       what    Name of the gateway information to return.
 #
 # Results:
-#       Returns the connection detail.
+#       Returns the gateway information.
 
-proc discord::gateway::GetConnectionInfo { sock what } {
-    return [dict get $::discord::gateway::Sockets $sock $what]
+proc discord::gateway::GetGatewayInfo { sock what } {
+    variable Gateways
+    return [set [dict get $Gateways $sock]::$what]
 }
 
-# discord::gateway::SetConnectionInfo --
+# discord::gateway::SetGatewayInfo --
 #
-#       Set a detail of the Gateway connection.
+#       Set gateway information
 #
 # Arguments:
 #       sock    WebSocket object.
-#       what    Name of the connection detail to set.
-#       value   Value to set the connection detail to.
+#       what    Name of the gateway information to set.
+#       value   Value to the gateway inforamtion to.
 #
 # Results:
-#       Returns a string of the connection detail.
+#       Returns the gateway information.
 
-proc discord::gateway::SetConnectionInfo { sock what value } {
-    return [dict set ::discord::gateway::Sockets $sock $what $value]
+proc discord::gateway::SetGatewayInfo { sock what value } {
+    variable Gateways
+    return [set [dict get $Gateways $sock]::$what $value]
 }
 
 # discord::gateway::CheckOp --
@@ -387,7 +436,7 @@ proc discord::gateway::SetConnectionInfo { sock what value } {
 #       op  A JSON integer.
 #
 # Results:
-#       Returns 1 if the opcode is valid, and 0 otherwise.
+#       Returns 1 if the opcode is valid, or 0 otherwise.
 
 proc discord::gateway::CheckOp { op } {
     variable log
@@ -409,39 +458,39 @@ proc discord::gateway::CheckOp { op } {
 #       msg     The message as a dictionary that represents a JSON object.
 #
 # Results:
-#       Returns 1 if the event is handled successfully, and 0 otherwise.
+#       Returns 1 if the event is handled successfully, or 0 otherwise.
 
 proc discord::gateway::EventHandler { sock msg } {
     variable log
     set t [dict get $msg t]
     set s [dict get $msg s]
     set d [dict get $msg d]
-    SetConnectionInfo $sock seq $s
+    SetGatewayInfo $sock seq $s
     ${log}::debug "EventHandler: sock: '$sock' t: '$t' seq: $s"
     switch -glob -- $t {
         READY {
             dict for {field value} $d {
-                SetConnectionInfo $sock $field $value
+                SetGatewayInfo $sock $field $value
             }
 
-            set interval [GetConnectionInfo $sock heartbeat_interval]
+            set interval [GetGatewayInfo $sock heartbeat_interval]
             ${log}::debug "EventHandler: Sending heartbeat every $interval ms"
             ::discord::gateway::Every $interval \
                     [list ::discord::gateway::Send $sock Heartbeat]
         }
         RESUME {    ;# Not much to do here
             if {[dict exists $d _trace]} {
-                SetConnectionInfo $sock _trace [dict get $d _trace]
+                SetGatewayInfo $sock _trace [dict get $d _trace]
             }
         }
     }
-    set eventCallbacks [GetConnectionInfo $sock eventCallbacks]
+    set eventCallbacks [GetGatewayInfo $sock eventCallbacks]
     if {[catch {dict get $eventCallbacks $t} res]} {
         ${log}::warn "EventHandler: Unknown Event: $t"
         set res {}
     }
     if {$res eq {}} {
-        after idle [list {*}[GetConnectionInfo $sock defEventCallback] $t $d]
+        after idle [list {*}[GetGatewayInfo $sock defEventCallback] $t $d]
     } else {
         after idle [list {*}$res $t $d]
     }
@@ -457,7 +506,7 @@ proc discord::gateway::EventHandler { sock msg } {
 #       msg     The message as a dictionary that represents a JSON object.
 #
 # Results:
-#       Returns 1 if the message is handled successfully, and 0 otherwise.
+#       Returns 1 if the message is handled successfully, or 0 otherwise.
 
 proc discord::gateway::OpHandler { sock msg } {
     set op [dict get $msg op]
@@ -481,7 +530,7 @@ proc discord::gateway::OpHandler { sock msg } {
             after idle [list discord::gateway::Send $sock Identify]
         }
         HELLO {
-            SetConnectionInfo $sock heartbeat_interval \
+            SetGatewayInfo $sock heartbeat_interval \
                     [dict get $msg d heartbeat_interval]
         }
         HEARTBEAT_ACK {
@@ -504,7 +553,7 @@ proc discord::gateway::OpHandler { sock msg } {
 #       msg     The message as a JSON string.
 #
 # Results:
-#       Returns 1 if the message is handled successfully, and 0 otherwise.
+#       Returns 1 if the message is handled successfully, or 0 otherwise.
 
 proc discord::gateway::TextHandler { sock msg } {
     variable log
@@ -535,11 +584,10 @@ proc discord::gateway::TextHandler { sock msg } {
 #       msg     The message as a dictionary that represents a JSON object.
 #
 # Results:
-#       Returns 1 if the message is handled successfully, and 0 otherwise.
+#       Returns 1 if the message is handled successfully, or 0 otherwise.
 
 proc discord::gateway::Handler { sock type msg } {
     variable log
-    variable Sockets
     ${log}::debug "Handler: type: $type"
     switch -glob -- $type {
         text {
@@ -554,7 +602,7 @@ proc discord::gateway::Handler { sock type msg } {
             }
         }
         connect {
-            set cmd [GetConnectionInfo $sock connectCallback]
+            set cmd [GetGatewayInfo $sock connectCallback]
             if {[llength $cmd] > 0} {
                 ::[lindex $cmd 0] {*}[lrange $cmd 1 end] $sock
             }
@@ -567,7 +615,9 @@ proc discord::gateway::Handler { sock type msg } {
             ${log}::notice "Handler: Connection closed."
         }
         disconnect {
-            dict unset Sockets $sock
+            variable Gateways
+            DeleteGateway [dict get $Gateways $sock]
+            dict unset Gateways $sock
             ${log}::notice "Handler: Disconnected."
         }
         ping {      ;# Not sure if Discord uses this.
@@ -592,7 +642,7 @@ proc discord::gateway::Handler { sock type msg } {
 #       args    Arguments to pass to opProc.
 #
 # Results:
-#       Returns 1 if the message is sent successfully, and 0 otherwise.
+#       Returns 1 if the message is sent successfully, or 0 otherwise.
 
 proc discord::gateway::Send { sock opProc args } {
     variable log
@@ -601,10 +651,10 @@ proc discord::gateway::Send { sock opProc args } {
     variable MsgLogLevel
     variable LimitPeriod
     variable LimitSend
-    set sendCount [GetConnectionInfo $sock sendCount]
+    set sendCount [GetGatewayInfo $sock sendCount]
     if {$sendCount == 0} {
         after [expr {$LimitPeriod * 1000}] \
-                [list discord::gateway::SetConnectionInfo $sock sendCount 0]
+                [list ::discord::gateway::SetGatewayInfo $sock sendCount 0]
     }
     if {$sendCount >= $LimitSend} {
         ${log}::warn "Send: Reached $LimitSend messages sent in $LimitPeriod s"
@@ -624,7 +674,7 @@ proc discord::gateway::Send { sock opProc args } {
         ${log}::error "::websocket::send: $res"
         return 0
     }
-    SetConnectionInfo $sock sendCount [incr sendCount]
+    SetGatewayInfo $sock sendCount [incr sendCount]
     return 1
 }
 
@@ -640,7 +690,7 @@ proc discord::gateway::Send { sock opProc args } {
 #       Returns the last sequence number received.
 
 proc discord::gateway::MakeHeartbeat { sock } {
-    return [GetConnectionInfo $sock seq]
+    return [GetGatewayInfo $sock seq]
 }
 
 # discord::gateway::MakeIdentify --
@@ -660,16 +710,16 @@ proc discord::gateway::MakeHeartbeat { sock } {
 proc discord::gateway::MakeIdentify { sock args } {
     variable log
     set token               [::json::write::string \
-                                    [GetConnectionInfo $sock token]]
+                                    [GetGatewayInfo $sock token]]
     set os                  [::json::write::string linux]
     set agent "discord.tcl $::discord::version"
     set browser             [::json::write::string $agent]
     set device              [::json::write::string $agent]
     set referrer            [::json::write::string ""]
     set referring_domain    [::json::write::string ""]
-    set compress            [GetConnectionInfo $sock compress]
+    set compress            [GetGatewayInfo $sock compress]
     set large_threshold     50
-    set shardInfo [GetConnectionInfo $sock shard]
+    set shardInfo [GetGatewayInfo $sock shard]
     set shardId [lindex $shardInfo 0]
     set numShards [lindex $shardInfo 1]
     if {![string is integer -strict $numShards] || $numShards < 1} {
@@ -738,9 +788,9 @@ proc discord::gateway::MakeIdentify { sock args } {
 
 proc discord::gateway::MakeResume { sock } {
     return [::json::write::object \
-            token [GetConnectionInfo $sock token] \
-            session_id [GetConnectionInfo $sock session_id] \
-            seq [GetConnectionInfo $sock seq]]
+            token [GetGatewayInfo $sock token] \
+            session_id [GetGatewayInfo $sock session_id] \
+            seq [GetGatewayInfo $sock seq]]
 }
 
 # discord::gateway::EventCallbackStub --
