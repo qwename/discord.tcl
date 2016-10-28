@@ -108,12 +108,8 @@ namespace eval discord {
 
 proc discord::connect { token {cmd {}} {shardInfo {0 1}} } {
     variable log
-    variable SessionId
     variable DefCallbacks
-    set id $SessionId
-    incr SessionId
-    set name ::discord::session::$id
-    set sessionNs [CreateSession $name]
+    set sessionNs [CreateSession]
     set sock [gateway::connect $token \
             [list ::discord::SetupEventCallbacks $cmd $sessionNs] $shardInfo]
     if {$sock eq ""} {
@@ -189,12 +185,15 @@ proc discord::setCallback { sessionNs event cmd } {
 #       Create a namespace for a session.
 #
 # Arguments:
-#       sessionNs   Name of fully-qualified namespace to create.
+#       None.
 #
 # Results:
 #       Creates a namespace specific to a session. Returns the namespace name.
 
-proc discord::CreateSession { sessionNs } {
+proc discord::CreateSession { } {
+    variable SessionId
+    set sessionNs ::discord::session::$SessionId
+    incr SessionId
     namespace eval $sessionNs {
     }
     set ${sessionNs}::log [::logger::init $sessionNs]
