@@ -206,7 +206,10 @@ proc discord::rest::UploadFile { token channelId data {cmd {}} } {
 #       Passes a message dictionary to the callback.
 
 proc discord::rest::EditMessage { token channelId messageId data {cmd {}} } {
-    set body [DictToJson $data {content string}]
+    set spec {
+            content string
+        }
+    set body [DictToJson $data $spec]
     Send $token PATCH "/channels/$channelId/messages/$messageId" $body $cmd
 }
 
@@ -244,7 +247,10 @@ proc discord::rest::DeleteMessage { token channelId messageId {cmd {}} } {
 #       None.
 
 proc discord::rest::BulkDeleteMessages { token channelId data {cmd {}} } {
-    set body [DictToJson $data {messages {array string}}]
+    set spec {
+            messages    {array string}
+        }
+    set body [DictToJson $data $spec]
     Send $token POST "/channels/$channelId/messages/bulk-delete" $data $cmd
 }
 
@@ -266,7 +272,13 @@ proc discord::rest::BulkDeleteMessages { token channelId data {cmd {}} } {
 
 proc discord::rest::EditChannelPermissions { token channelId overwriteId data \
         {cmd {}} } {
-    Send $token POST "/channels/$channelId/permissions/$overwriteId" $data $cmd
+    set spec {
+            allow   bare
+            deny    bare
+            type    string
+    }
+    set body [DictToJson $data $spec]
+    Send $token POST "/channels/$channelId/permissions/$overwriteId" $body $cmd
 }
 
 # discord::rest::DeleteChannelPermission --
@@ -322,7 +334,14 @@ proc discord::rest::GetChannelInvites { token channelId {cmd {}} } {
 #       None.
 
 proc discord::rest::CreateChannelInvite { token channelId data {cmd {}} } {
-    Send $token POST "/channels/$channelId/invites" $data $cmd
+    set spec {
+            max_age     bare
+            max_uses    bare
+            temporary   bare
+            unique      bare
+        }
+    set body [DictToJson $data $spec]
+    Send $token POST "/channels/$channelId/invites" $body $cmd
 }
 
 # discord::rest::TriggerTypingIndicator --
@@ -415,7 +434,11 @@ proc discord::rest::DeletePinnedChannelMessage { token channelId messageId \
 
 proc discord::rest::GroupDMAddRecipient { token channelId userId data {cmd {}} \
         } {
-    Send $token PUT "/channels/$channelId/recipients/$userId" $data $cmd
+    set spec {
+            access_token    string
+        }
+    set body [DictToJson $data $spec]
+    Send $token PUT "/channels/$channelId/recipients/$userId" $body $cmd
 }
 
 # discord::rest::GroupDMRemoveRecipient --
