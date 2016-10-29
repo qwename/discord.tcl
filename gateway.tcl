@@ -133,6 +133,9 @@ proc discord::gateway::connect { token {cmd {}} {shardInfo {0 1}} } {
     variable GatewayApiEncoding
     append gateway "/?v=${GatewayApiVersion}&encoding=$GatewayApiEncoding"
     ${log}::notice "connect: $gateway"
+
+    # There might be a race condition where the Gateways dictionary doesn't get
+    # initialized with the new socket before Handler gets called.
     if {[catch {::websocket::open $gateway ::discord::gateway::Handler} \
             sock options]} {
         ${log}::error "connect: $gateway: $sock"
