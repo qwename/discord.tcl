@@ -12,6 +12,7 @@ package require Tcl 8.6
 package require http
 package require tls
 package require json
+package require json::write
 package require logger
 
 ::http::register https 443 ::tls::socket
@@ -36,7 +37,7 @@ namespace eval discord::rest {
 #       token       Bot token or OAuth2 bearer token.
 #       verb        HTTP method. One of GET, POST, PUT, PATCH, DELETE.
 #       resource    Path relative to the base URL, prefixed with '/'.
-#       data        (optional) dictionary of parameters and values to include.
+#       body        (optional) body to be sent in the request.
 #       cmd         (optional) list containing a callback procedure, and
 #                   additional arguments to be passed to it. The last two
 #                   arguments will be a data dictionary, and the HTTP code or
@@ -47,7 +48,7 @@ namespace eval discord::rest {
 # Results:
 #       Raises an exception if verb is unknown.
 
-proc discord::rest::Send { token verb resource {data {}} {cmd {}} args } {
+proc discord::rest::Send { token verb resource {body {}} {cmd {}} args } {
     variable log
     variable SendId
     variable SendInfo
@@ -102,10 +103,6 @@ proc discord::rest::Send { token verb resource {data {}} {cmd {}} args } {
     set callbackName ::discord::rest::SendCallback${sendId}
     interp alias {} $callbackName {} ::discord::rest::SendCallback $sendId
 
-    set body [list]
-    dict for {field value} $data {
-        lappend body $field $value
-    }
     set url "${::discord::ApiBaseUrl}${resource}"
     dict set SendInfo $sendId [dict create cmd $cmd url $url token $token \
             route $route]
@@ -114,8 +111,8 @@ proc discord::rest::Send { token verb resource {data {}} {cmd {}} args } {
             -method $verb \
             -command $callbackName \
             {*}$args]
-    if {[llength $body] > 0} {
-        lappend command -query [::http::formatQuery {*}$body]
+    if {$body ne {}} {
+        lappend command -query $body
     }
     ${log}::debug "Send: $route: $command"
     {*}$command
@@ -218,4 +215,80 @@ proc discord::rest::CallbackCoroutine { coroutine data state } {
         yield
     }
     return [list $data $state]
+}
+
+# discord::rest::DictToJson --
+#
+#       Serialize a dictionary as a JSON string with a specification.
+#
+# Arguments:
+#       data    Dictionary representing a JSON object.
+#       spec    Dictionary where each key is a field name, and each value is a
+#               list containing two elements, the field type, metadata about the
+#               type. Field types are one of object, array, string, bare.
+#               Actions for each field type on the value:
+#               object: Call DictToJson on the value with metadata as spec.
+#               array: metadata must be one of string, bare. Performs the
+#                   relevant action for the type.
+#               string: Apply json::write::string.
+#               bare: Nothing is done.
+#       indent  (optional) boolean for setting the output indentation setting.
+#               Default to false.
+#
+# Results:
+#       Returns the modified dictionary value.
+#
+# Examples:
+#       data: { id 12345 messages {1 2 3} user {gold 0} }
+#       spec: { id {string {}}
+#               messages {array string}
+#               user {object {
+#                       gold {bare {}}
+#                     }
+#                   }
+#             }
+
+proc discord::rest::DictToJson { data spec {indent false} } {
+    ::json::write::indented $indent
+    set jsonData [dict create]
+    dict for {field typeInfo} $spec {
+        if {![dict exists $data $field]} {
+            continue
+        }
+        lassign $typeInfo type meta
+        set value [dict get $data $field]
+        switch $type {
+            object {
+                set value [DictToJson $value $meta $indent]
+            }
+            array {
+                set newValue [list]
+                switch $meta {
+                    string {
+                        foreach element $value {
+                            lappend newValue [::json::write::string $element]
+                        }
+                    }
+                    bare {
+                        set newValue $value
+                    }
+                    default {
+                        return -code error \
+                                "Invalid array element type for $field: $meta"
+                    }
+                }
+                set value [::json::write::array {*}$newValue]
+            }
+            string {
+                set value [::json::write::string $value]
+            }
+            bare {
+            }
+            default {
+                return -code error "Unknown type: $type"
+            }
+        }
+        dict set jsonData $field $value
+    }
+    return [::json::write::object {*}$jsonData]
 }
