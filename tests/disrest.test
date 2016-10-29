@@ -31,3 +31,12 @@ test DictToJson-1.1 {Empty dictionary} -body {
 test DictToJson-1.2 {One key, type string} -body {
     discord::rest::DictToJson [dict create id 123] [dict create id string]
 } -result {{"id":"123"}}
+
+test DictToJson-1.3 {One key, type bare} -body {
+    discord::rest::DictToJson [dict create id 123] [dict create id bare]
+} -result {{"id":123}}
+
+test DictToJson-1.4 {One key, type array of strings} -body {
+    discord::rest::DictToJson [dict create ids [list 1 2 3]] \
+            [dict create ids [list array string]]
+} -result {{"ids":["1","2","3"]}}
