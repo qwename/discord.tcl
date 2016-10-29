@@ -150,16 +150,17 @@ proc discord::rest::CreateMessage { token channelId data {cmd {}} } {
 # Arguments:
 #       token       Bot token or OAuth2 bearer token.
 #       channelId   Channel ID.
+#       filename    File name.
+#       type        Content-Type value.
 #       data        Dictionary representing a JSON object. Each key is one of
-#                   content, nonce, tts, file, filename. Only the key file is
-#                   required.
+#                   content, nonce, tts, file. Only the key file is required.
 #       cmd         (optional) callback procedure invoked after a response is
 #                   received.
 #
 # Results:
 #       Passes a message dictionary to the callback.
 
-proc discord::rest::UploadFile { token channelId data {cmd {}} } {
+proc discord::rest::UploadFile { token channelId filename type data {cmd {}} } {
     # Reference: https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html
     # UUID is 36 characters
     set boundary "discord::rest::UploadFile--[uuid::uuid generate]"
@@ -175,15 +176,10 @@ proc discord::rest::UploadFile { token channelId data {cmd {}} } {
         }
     }
     if {[dict exists $data file]} {
-        if {[dict exists $data filename]} {
-            set filename [dict get $data filename]
-        } else {
-            set filename {}
-        }
         set value [dict get $data file]
         append body "$delimiter\r\n${dispoPrefix}name=\"file\"; "\
                 "filename=\"$filename\";\r\n" \
-                "Content-Type: application/octet-stream\r\n\r\n$value"
+                "Content-Type: $type\r\n\r\n$value"
     }
     append body $closeDelimiter
     Send $token POST "/channels/$channelId/messages" $body $cmd \
