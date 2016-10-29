@@ -20,6 +20,10 @@ namespace eval discord {
             managed     bare
             mentionable bare
         }
+        guild_embed {
+            enabled     bare
+            channel_id  string
+        }
         overwrite {
             id      string
             type    string
