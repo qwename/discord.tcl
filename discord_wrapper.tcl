@@ -9,8 +9,48 @@
 # file.
 
 namespace eval discord {
-    namespace export sendMessage createDM sendDM
+    namespace export sendMessage deleteMessage createDM sendDM
     namespace ensemble create
+}
+
+# discord::GenApiProc --
+#
+#       Used in place of the proc command for easier programming of API calls
+#       in the discord namespace. Code for dealing with coroutine will be
+#       added.
+#
+# Arguments:
+#       name    Name of the procedure that will be created in the discord
+#               namespace.
+#       args    Arguments that the procedure will accept.
+#       body    Script to run.
+#
+# Results:
+#       A procedure discord::$name will be created, with these additions:
+#       The argument "sessionNs" is prepended to the list of args.
+#       The argument "getResult" is appended to the list of args.
+#       The variable "cmd" should be passed to discord::rest procedures that
+#       take a callback argument.
+
+proc discord::GenApiProc { name args body } {
+    set args [list sessionNs {*}$args {getResult 0}]
+    set setup {
+        if {$getResult == 1} {
+            set caller [uplevel info coroutine]
+        } else {
+            set caller {}
+        }
+        set cmd [list]
+        set name {}
+        if {$caller ne {}} {
+            set myName [lindex [info level 0] 0]
+            set count [incr ${sessionNs}::WrapperCallCount::$myName]
+            set name ${sessionNs}::WrapperCoros::${myName}$count
+            set cmd [list coroutine $name discord::rest::CallbackCoroutine \
+                    $caller]
+        }
+    }
+    proc ::discord::$name $args "$setup\n$body\nreturn \$name"
 }
 
 # Shared Arguments:
@@ -40,22 +80,26 @@ namespace eval discord {
 # Results:
 #       See "Shared Results".
 
-proc discord::sendMessage { sessionNs channelId content {getResult 0} } {
-    if {$getResult == 1} {
-        set caller [uplevel info coroutine]
-    } else {
-        set caller {}
-    }
-    set count [incr ${sessionNs}::sendMessageCount]
-    set cmd [list]
-    set name {}
-    if {$caller ne {}} {
-        set name ${sessionNs}::sendMsgCoro$count
-        set cmd [list coroutine $name discord::rest::CallbackCoroutine $caller]
-    }
+discord::GenApiProc sendMessage { channelId content } {
     rest::CreateMessage [set ${sessionNs}::token] $channelId \
             [dict create content $content] $cmd
-    return $name
+}
+
+# discord::deleteMessage --
+#
+#       Delete a message from the channel.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       channelId   Channel ID.
+#       messageId   Message ID.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc deleteMessage { channelId messageId } {
+    rest::DeleteMessage [set ${sessionNs}::token] $channelId $messageId $cmd
 }
 
 # discord::createDM --
@@ -70,22 +114,9 @@ proc discord::sendMessage { sessionNs channelId content {getResult 0} } {
 # Results:
 #       See "Shared Results".
 
-proc discord::createDM { sessionNs userId {getResult 0} } {
-    if {$getResult == 1} {
-        set caller [uplevel info coroutine]
-    } else {
-        set caller {}
-    }
-    set cmd [list]
-    set name {}
-    if {$caller ne {}} {
-        set count [incr ${sessionNs}::createDMCount]
-        set name ${sessionNs}::createDMCoro$count
-        set cmd [list coroutine $name discord::rest::CallbackCoroutine $caller]
-    }
+discord::GenApiProc createDM { userId } {
     rest::CreateDM [set ${sessionNs}::token] \
             [dict create recipient_id $userId] $cmd
-    return $name
 }
 
 # discord::sendDM --
