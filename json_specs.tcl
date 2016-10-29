@@ -8,11 +8,13 @@
 # See the file "LICENSE" for information on usage and redistribution of this
 # file.
 
-set discord::JsonSpecs {
+namespace eval discord {
+    variable JsonSpecs {
         overwrite {
             id      string
             type    string
             allow   bare
             deny    bare
         }
+    }
 }
