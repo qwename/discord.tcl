@@ -98,6 +98,21 @@ proc discord::rest::Send { token verb resource {body {}} {cmd {}} args } {
         dict set SendCount $token $route [incr sendCount]
     }
 
+    set moreOptions [list]
+    set moreHeaders [list]
+    foreach {option value} $args {
+        if {![regexp {^-(\w+)$} $option -> opt]} {
+            return -code error "Invalid option: $option"
+        } elseif {$opt in [list method command]} {
+            return -code error "Option can't be used: $option"
+        }
+        if {$option eq "-headers"} {
+            lappend moreHeaders {*}$value
+        } else {
+            lappend moreOptions $option $value
+        }
+    }
+
     set sendId $SendId
     incr SendId
     set callbackName ::discord::rest::SendCallback${sendId}
@@ -107,10 +122,10 @@ proc discord::rest::Send { token verb resource {body {}} {cmd {}} args } {
     dict set SendInfo $sendId [dict create cmd $cmd url $url token $token \
             route $route]
     set command [list ::http::geturl $url \
-            -headers [list Authorization "Bot $token"] \
+            -headers [list Authorization "Bot $token" {*}$moreHeaders] \
             -method $verb \
             -command $callbackName \
-            {*}$args]
+            {*}$moreOptions]
     if {$body ne {}} {
         lappend command -query $body
     }
