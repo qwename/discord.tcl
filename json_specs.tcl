@@ -10,6 +10,16 @@
 
 namespace eval discord {
     variable JsonSpecs {
+        role {
+            id          string
+            name        string
+            color       bare
+            hoist       bare
+            position    bare
+            permissions bare
+            managed     bare
+            mentionable bare
+        }
         overwrite {
             id      string
             type    string
