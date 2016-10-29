@@ -225,7 +225,8 @@ proc discord::rest::CallbackCoroutine { coroutine data state } {
 #       data    Dictionary representing a JSON object.
 #       spec    Dictionary where each key is a field name, and each value is a
 #               list containing two elements, the field type, metadata about the
-#               type. Field types are one of object, array, string, bare.
+#               type. The value can also just be the field type if no metadata
+#               is required. Field types are one of object, array, string, bare.
 #               Actions for each field type on the value:
 #               object: Call DictToJson on the value with metadata as spec.
 #               array: metadata must be one of string, bare. Performs the
