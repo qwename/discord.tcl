@@ -60,7 +60,12 @@ proc discord::rest::GetUser { token userId {cmd {}} } {
 #       Passes a user dictionary to the callback.
 
 proc discord::rest::ModifyCurrentUser { token data {cmd {}} } {
-    Send $token PATCH "/users/@me" $data $cmd
+    set spec {
+            username    string
+            avatar      bare
+        }
+    set body [DictToJson $data $spec]
+    Send $token PATCH "/users/@me" $body $cmd
 }
 
 # discord::rest::GetCurrentUserGuilds --
@@ -127,9 +132,11 @@ proc discord::rest::GetUserDMs { token {cmd {}} } {
 #       Passes a DM channel dictionary to the callback.
 
 proc discord::rest::CreateDM { token data {cmd {}} } {
-    Send $token POST "/users/@me/channels" {} $cmd \
-            -type "application/json" \
-            -query [json::dict2json $data]
+    set spec {
+            recipient   string
+        }
+    set body [DictToJson $data $spec]
+    Send $token POST "/users/@me/channels" $body $cmd -type "application/json"
 }
 
 # discord::rest::CreateGroupDM --
@@ -147,7 +154,11 @@ proc discord::rest::CreateDM { token data {cmd {}} } {
 #       Passes a DM channel dictionary to the callback.
 
 proc discord::rest::CreateGroupDM { token data {cmd {}} } {
-    Send $token POST "/users/@me/channels" $data $cmd
+    set spec {
+            access_tokens   {array string}
+        }
+    set body [DictToJson $data $spec]
+    Send $token POST "/users/@me/channels" $body $cmd
 }
 
 # discord::rest::GetUsersConnections --
