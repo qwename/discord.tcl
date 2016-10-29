@@ -26,7 +26,12 @@
 #       Passes a webhook dictionary to the callback.
 
 proc discord::rest::CreateWebhook { token channelId data {cmd {}} } {
-    Send $token POST "/channels/$channelId/webhooks" $data $cmd
+    set spec {
+            name    string
+            avatar  string
+        }
+    set body [DictToJson $data $spec]
+    Send $token POST "/channels/$channelId/webhooks" $body $cmd
 }
 
 # discord::rest::GetChannelWebhooks --
@@ -105,14 +110,21 @@ proc discord::rest::GetWebhookWithToken { webhookId webhookToken {cmd {}} } {
 # Arguments:
 #       token       Bot token or OAuth2 bearer token.
 #       webhookId   Webhook ID.
+#       data        Dictionary representing a JSON object. Each key is one of
+#                   name, avatar. All keys are optional.
 #       cmd         (optional) callback procedure invoked after a response is
 #                   received.
 #
 # Results:
 #       Passes a webhook dictionary to the callback.
 
-proc discord::rest::ModifyWebhook { token webhookId {cmd {}} } {
-    Send $token PATCH "/webhooks/$webhookId" {} $cmd
+proc discord::rest::ModifyWebhook { token webhookId data {cmd {}} } {
+    set spec {
+            name    string
+            avatar  string
+        }
+    set body [DictToJson $data $spec]
+    Send $token PATCH "/webhooks/$webhookId" $body $cmd
 }
 
 # discord::rest::ModifyWebhookWithToken --
@@ -123,14 +135,22 @@ proc discord::rest::ModifyWebhook { token webhookId {cmd {}} } {
 # Arguments:
 #       webhookId       Webhook ID.
 #       webhookToken    Webhook token.
+#       data            Dictionary representing a JSON object. Each key is one
+#                       of name, avatar. All keys are optional.
 #       cmd             (optional) callback procedure invoked after a response
 #                       is received.
 #
 # Results:
 #       Passes a webhook dictionary to the callback.
 
-proc discord::rest::ModifyWebhookWithToken { webhookId webhookToken {cmd {}} } {
-    Send $token PATCH "/webhooks/$webhookId/$webhookToken" {} $cmd  
+proc discord::rest::ModifyWebhookWithToken { webhookId webhookToken data \
+        {cmd {}} } {
+    set spec {
+            name    string
+            avatar  string
+        }
+    set body [DictToJson $data $spec]
+    Send $token PATCH "/webhooks/$webhookId/$webhookToken" $body $cmd  
 }
 
 # discord::rest::DeleteWebhook --
