@@ -151,7 +151,8 @@ proc discord::rest::CreateMessage { token channelId data {cmd {}} } {
 #       token       Bot token or OAuth2 bearer token.
 #       channelId   Channel ID.
 #       data        Dictionary representing a JSON object. Each key is one of
-#                   content, nonce, tts, file. Only the key file is required.
+#                   content, nonce, tts, file, filename. Only the key file is
+#                   required.
 #       cmd         (optional) callback procedure invoked after a response is
 #                   received.
 #
