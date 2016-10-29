@@ -45,7 +45,19 @@ proc discord::rest::GetGuild { token guildId {cmd {}} } {
 #       Passes a guild dictionary to the callback.
 
 proc discord::rest::ModifyGuild { token guildId data {cmd {}} } {
-    Send $token PATCH "/guilds/$guildId" $data $cmd
+    set spec {
+            name                            string
+            region                          string
+            verification_level              bare
+            default_message_notifications   bare
+            afk_channel_id                  string
+            afk_timeout                     bare
+            icon                            string
+            owner_id                        string
+            splash                          string
+        }
+    set body [DictToJson $data $spec]
+    Send $token PATCH "/guilds/$guildId" $body $cmd
 }
 
 # discord::rest::DeleteGuild --
@@ -98,7 +110,23 @@ proc discord::rest::GetGuildChannels { token guildId {cmd {}} } {
 #       Passes a channel dictionary to the callback.
 
 proc discord::rest::CreateGuildChannel { token guildId data {cmd {}} } {
-    Send $token POST "/guilds/$guildId/channels" $data $cmd
+    if {[dict exists $data permission_overwrites]} {
+        set poJsonList [list]
+        foreach permOverwrite [dict get $data permission_overwrites] {
+            lappend poJsonList [DictToJson $permOverwrite \
+                    [dict get $::discord::JsonSpecs overwrite]]
+        }
+        dict set data permission_overwrites $poJsonList
+    }
+    set spec {
+            name                    string
+            type                    string
+            bitrate                 bare
+            user_limit              bare
+            permission_overwrites   {array bare}
+        }
+    set body [DictToJson $data $spec]
+    Send $token POST "/guilds/$guildId/channels" $body $cmd
 }
 
 # discord::rest::ModifyGuildChannelPosition --
@@ -117,7 +145,12 @@ proc discord::rest::CreateGuildChannel { token guildId data {cmd {}} } {
 #       None.
 
 proc discord::rest::ModifyGuildChannelPosition { token guildId data {cmd {}} } {
-    Send $token PATCH "/guilds/$guildId/channels" $data $cmd
+    set spec {
+            id          string
+            position    bare
+        }
+    set body [DictToJson $data $spec]
+    Send $token PATCH "/guilds/$guildId/channels" $body $cmd
 }
 
 # discord::rest::GetGuildMember --
@@ -154,7 +187,12 @@ proc discord::rest::GetGuildMember { token guildId userId {cmd {}} } {
 #       Passes a list of guild member dictionaries to the callback.
 
 proc discord::rest::ListGuildMembers { token guildId data {cmd {}} } {
-    Send $token GET "/guilds/$guildId/members" $data $cmd
+    set spec {
+            limit   bare
+            after   bare
+        }
+    set body [DictToJson $data $spec]
+    Send $token GET "/guilds/$guildId/members" $body $cmd
 }
 
 # discord::rest::AddGuildMember --
@@ -175,7 +213,23 @@ proc discord::rest::ListGuildMembers { token guildId data {cmd {}} } {
 #       Passes a guild member dictionary to the callback.
 
 proc discord::rest::AddGuildMember { token guildId userId data {cmd {}} } {
-    Send $token PUT "/guilds/$guildId/members/$userId" $data $cmd
+    if {[dict exists $data roles]} {
+        set roleJsonList [list]
+        foreach role [dict get $data roles] {
+            lappend roleJsonList [DictToJson $role \
+                    [dict get $::discord::JsonSpecs role]]
+        }
+        dict set data roles $roleJsonList
+    }
+    set spec {
+            access_token    string
+            nick            string
+            roles           {array bare}
+            mute            bare
+            deaf            bare
+        }
+    set body [DictToJson $data $spec]
+    Send $token PUT "/guilds/$guildId/members/$userId" $body $cmd
 }
 
 # discord::rest::ModifyGuildMember --
@@ -195,7 +249,23 @@ proc discord::rest::AddGuildMember { token guildId userId data {cmd {}} } {
 #       None.
 
 proc discord::rest::ModifyGuildMember { token guildId userId data {cmd {}} } {
-    Send $token PATCH "/guilds/$guildId/members/$userId" $data $cmd
+    if {[dict exists $data roles]} {
+        set roleJsonList [list]
+        foreach role [dict get $data roles] {
+            lappend roleJsonList [DictToJson $role \
+                    [dict get $::discord::JsonSpecs role]]
+        }
+        dict set data roles $roleJsonList
+    }
+    set spec {
+            nick        string
+            roles       {array bare}
+            mute        bare
+            deaf        bare
+            channel_id  string
+        }
+    set body [DictToJson $data $spec]
+    Send $token PATCH "/guilds/$guildId/members/$userId" $body $cmd
 }
 
 # discord::rest::RemoveGuildMember --
@@ -250,7 +320,11 @@ proc discord::rest::GetGuildBans { token guildId {cmd {}} } {
 #       None.
 
 proc discord::rest::CreateGuildBan { token guildId userId data {cmd {}} } {
-    Send $token PUT "/guilds/$guildId/bans/$userId" $data $cmd
+    set spec {
+            delete-message-days bare
+        }
+    set body [DictToJson $data $spec]
+    Send $token PUT "/guilds/$guildId/bans/$userId" $body $cmd
 }
 
 # discord::rest::RemoveGuildBan --
@@ -322,7 +396,16 @@ proc discord::rest::CreateGuildRole { token guildId {cmd {}} } {
 #       Passes a role dictionary to the callback.
 
 proc discord::rest::ModifyGuildRole { token guildId roleId data {cmd {}} } {
-    Send $token PATCH "/guilds/$guildId/roles/$roleId" $data $cmd
+    set spec {
+            name        string
+            permissions bare
+            position    bare
+            color       bare
+            hoist       bare
+            mentionable bare
+        }
+    set body [DictToJson $data $spec]
+    Send $token PATCH "/guilds/$guildId/roles/$roleId" $body $cmd
 }
 
 # discord::rest::DeleteGuildRole --
@@ -360,7 +443,11 @@ proc discord::rest::DeleteGuildRole { token guildId roleId {cmd {}} } {
 #       Passes a dictionary with the key 'pruned' to the callback.
 
 proc discord::rest::GetGuildPruneCount { token guildId data {cmd {}} } {
-    Send $token GET "/guilds/$guildId/prune" $data $cmd
+    set spec {
+            days    bare
+        }
+    set body [DictToJson $data $spec]
+    Send $token GET "/guilds/$guildId/prune" $body $cmd
 }
 
 # discord::rest::BeginGuildPrune --
@@ -379,7 +466,11 @@ proc discord::rest::GetGuildPruneCount { token guildId data {cmd {}} } {
 #       Passes a dictionary with the key 'pruned' to the callback.
 
 proc discord::rest::BeginGuildPrune { token guildId data {cmd {}} } {
-    Send $token POST "/guilds/$guildId/prune" $data $cmd
+    set spec {
+            days    bare
+        }
+    set body [DictToJson $data $spec]
+    Send $token POST "/guilds/$guildId/prune" $body $cmd
 }
 
 # discord::rest::GetGuildVoiceRegions --
@@ -449,7 +540,12 @@ proc discord::rest::GetGuildIntegrations { token guildId {cmd {}} } {
 #       None.
 
 proc discord::rest::CreateGuildIntegration { token guildId data {cmd {}} } {
-    Send $token POST "/guilds/$guildId/integrations" $data $cmd
+    set spec {
+            type    string
+            id      string
+        }
+    set body [DictToJson $data $spec]
+    Send $token POST "/guilds/$guildId/integrations" $body $cmd
 }
 
 # discord::rest::ModifyGuildIntegration --
@@ -471,7 +567,13 @@ proc discord::rest::CreateGuildIntegration { token guildId data {cmd {}} } {
 
 proc discord::rest::ModifyGuildIntegration { token guildId integrationId data \
         {cmd {}} } {
-    Send $token PATCH "/guilds/$guildId/integrations/$integrationId" $data $cmd
+    set spec {
+            expire_behavior     bare
+            expire_grace_period bare
+            enable_emoticons    bare
+        }
+    set body [DictToJson $data $spec]
+    Send $token PATCH "/guilds/$guildId/integrations/$integrationId" $body $cmd
 }
 
 # discord::rest::DeleteGuildIntegration --
@@ -545,5 +647,6 @@ proc discord::rest::GetGuildEmbed { token guildId {cmd {}} } {
 #       Passes a guild embed dictionary to the callback.
 
 proc discord::rest::ModifyGuildEmbed { token guildId data {cmd {}} } {
-    Send $token GET "/guilds/$guildId/embed" $data $cmd
+    set body [DictToJson $data [dict get $::discord::JsonSpecs guild_embed]]
+    Send $token GET "/guilds/$guildId/embed" $body $cmd
 }
