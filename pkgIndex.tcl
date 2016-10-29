@@ -12,6 +12,7 @@ package ifneeded discord 0.5.0 "
     source [file join $dir gateway.tcl] ;
     source [file join $dir callback.tcl] ;
     source [file join $dir disrest.tcl] ;
+    source [file join $dir json_specs.tcl] ;
     source [file join $dir disrest_channel.tcl] ;
     source [file join $dir disrest_guild.tcl] ;
     source [file join $dir disrest_invite.tcl] ;
