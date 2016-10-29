@@ -1,0 +1,33 @@
+# Commands covered: DictToJson
+#
+# disrest.test --
+#
+#       This file contains tests for commands in the discord::rest namespace.
+#       Sourcing this file into Tcl runs the tests and generates output for
+#       errors. No output means no errors were found.
+#
+# Copyright (c) 2016, Yixin Zhang
+#
+# See the file "LICENSE" for information on usage and redistribution of this
+# file.
+
+package require tcltest
+namespace import tcltest::*
+
+;# Uncomment the next line to show more verbose output.
+;#verbose [list body error start usec]
+
+set scriptDir [file dirname [info script]]
+
+# Add parent directory to auto_path to load the discord package.
+
+lappend ::auto_path "$scriptDir/../"
+package require discord
+
+test DictToJson-1.1 {Empty dictionary} -body {
+    discord::rest::DictToJson [dict create] [dict create]
+} -result {{}}
+
+test DictToJson-1.2 {One key, type string} -body {
+    discord::rest::DictToJson [dict create id 123] [dict create id string]
+} -result {{"id":"123"}}
