@@ -8,6 +8,8 @@
 # See the file "LICENSE" for information on usage and redistribution of this
 # file.
 
+package require uuid
+
 # All data dictionary keys are required unless stated otherwise.
 
 # discord::rest::GetChannel --
@@ -44,7 +46,15 @@ proc discord::rest::GetChannel { token channelId {cmd {}} } {
 #       Passes a Guild channel dictionary to the callback.
 
 proc discord::rest::ModifyChannel { token channelId data {cmd {}} } {
-    Send $token PATCH "/channels/$channelId" $data $cmd
+    set spec {
+            name        string
+            position    bare
+            topic       string
+            bitrate     bare
+            user_limit  bare
+        }
+    set body [DictToJson $data $spec]
+    Send $token PATCH "/channels/$channelId" $body $cmd
 }
 
 # discord::rest::DeleteChannel --
@@ -80,7 +90,14 @@ proc discord::rest::DeleteChannel { token channelId {cmd {}} } {
 #       Passes a list of message dictionaries to the callback.
 
 proc discord::rest::GetChannelMessages { token channelId data {cmd {}} } {
-    Send $token GET "/channels/$channelId/messages" $data $cmd
+    set spec {
+            around  string
+            before  string
+            after   string
+            limit   bare
+        }
+    set body [DictToJson $data $spec]
+    Send $token GET "/channels/$channelId/messages" $body $cmd
 }
 
 # discord::rest::GetChannelMessage --
@@ -103,14 +120,13 @@ proc discord::rest::GetChannelMessage { token channelId messageId {cmd {}} } {
 
 # discord::rest::CreateMessage --
 #
-#       Post a message or file to a Guild Text or DM channel.
+#       Post a message to a Guild Text or DM channel.
 #
 # Arguments:
 #       token       Bot token or OAuth2 bearer token.
 #       channelId   Channel ID.
 #       data        Dictionary representing a JSON object. Each key is one of
-#                   content, nonce, tts, file. At least one of content or file
-#                   is required.
+#                   content, nonce, tts. Only the key content is required.
 #       cmd         (optional) callback procedure invoked after a response is
 #                   received.
 #
@@ -118,7 +134,59 @@ proc discord::rest::GetChannelMessage { token channelId messageId {cmd {}} } {
 #       Passes a message dictionary to the callback.
 
 proc discord::rest::CreateMessage { token channelId data {cmd {}} } {
-    Send $token POST "/channels/$channelId/messages" $data $cmd
+    set spec {
+            content string
+            nonce   string
+            tts     bare
+        }
+    set body [DictToJson $data $spec]
+    Send $token POST "/channels/$channelId/messages" $body $cmd
+}
+
+# discord::rest::UploadFile --
+#
+#       Post a file to a Guild Text or DM channel.
+#
+# Arguments:
+#       token       Bot token or OAuth2 bearer token.
+#       channelId   Channel ID.
+#       data        Dictionary representing a JSON object. Each key is one of
+#                   content, nonce, tts, file. Only the key file is required.
+#       cmd         (optional) callback procedure invoked after a response is
+#                   received.
+#
+# Results:
+#       Passes a message dictionary to the callback.
+
+proc discord::rest::UploadFile { token channelId data {cmd {}} } {
+    # Reference: https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html
+    # UUID is 36 characters
+    set boundary "discord::rest::UploadFile--[uuid::uuid generate]"
+    set delimiter "\r\n--$boundary"
+    set closeDelimiter "$delimiter--"
+    set dispoPrefix "Content-Disposition: form-data; "
+    set body ""
+    foreach name [list content nonce tts] {
+        if {[dict exists $data $name]} {
+            set value [dict get $data $name]
+            append body "$delimiter\r\n${dispoPrefix}name=\"$name\";\r\n\r\n" \
+                    "$value\r\n"
+        }
+    }
+    if {[dict exists $data file]} {
+        if {[dict exists $data filename]} {
+            set filename [dict get $data filename]
+        } else {
+            set filename {}
+        }
+        set value [dict get $data file]
+        append body "$delimiter\r\n${dispoPrefix}name=\"file\"; "\
+                "filename=\"$filename\";\r\n" \
+                "Content-Type: application/octet-stream\r\n\r\n$value"
+    }
+    append body $closeDelimiter
+    Send $token POST "/channels/$channelId/messages" $body $cmd \
+            -type "multipart/form-data; boundary=$boundary"
 }
 
 # discord::rest::EditMessage --
@@ -138,7 +206,8 @@ proc discord::rest::CreateMessage { token channelId data {cmd {}} } {
 #       Passes a message dictionary to the callback.
 
 proc discord::rest::EditMessage { token channelId messageId data {cmd {}} } {
-    Send $token PATCH "/channels/$channelId/messages/$messageId" $data $cmd
+    set body [DictToJson $data {content string}]
+    Send $token PATCH "/channels/$channelId/messages/$messageId" $body $cmd
 }
 
 # discord::rest::DeleteMessage --
@@ -175,6 +244,7 @@ proc discord::rest::DeleteMessage { token channelId messageId {cmd {}} } {
 #       None.
 
 proc discord::rest::BulkDeleteMessages { token channelId data {cmd {}} } {
+    set body [DictToJson $data {messages {array string}}]
     Send $token POST "/channels/$channelId/messages/bulk-delete" $data $cmd
 }
 
