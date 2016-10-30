@@ -247,8 +247,8 @@ proc discord::rest::CallbackCoroutine { coroutine data state } {
 #               is required. Field types are one of object, array, string, bare.
 #               Actions for each field type on the value:
 #               object: Call DictToJson on the value with metadata as spec.
-#               array: metadata must be one of string, bare. Performs the
-#                   relevant action for the type.
+#               array: metadata must be one of object, array, string, bare.
+#                   Performs the relevant action for the type.
 #               string: Apply json::write::string.
 #               bare: Nothing is done.
 #       indent  (optional) boolean for setting the output indentation setting.
@@ -281,22 +281,7 @@ proc discord::rest::DictToJson { data spec {indent false} } {
                 set value [DictToJson $value $meta $indent]
             }
             array {
-                set newValue [list]
-                switch $meta {
-                    string {
-                        foreach element $value {
-                            lappend newValue [::json::write::string $element]
-                        }
-                    }
-                    bare {
-                        set newValue $value
-                    }
-                    default {
-                        return -code error \
-                                "Invalid array element type for $field: $meta"
-                    }
-                }
-                set value [::json::write::array {*}$newValue]
+                set value [ListToJsonArray $value $meta]
             }
             string {
                 set value [::json::write::string $value]
@@ -310,4 +295,46 @@ proc discord::rest::DictToJson { data spec {indent false} } {
         dict set jsonData $field $value
     }
     return [::json::write::object {*}$jsonData]
+}
+
+# discord::rest::ListToJsonArray --
+#
+#       Serialize a list as a JSON array.
+#
+# Arguments:
+#       list    List of elements to seralize.
+#       type    The type to serialize each element into.
+#       meta    (optional) subtype if type is array, or JSON specification if
+#               type is object. Refer to discord::rest::DictToJson's spec
+#               argument for details.
+#
+# Results:
+#       Returns a JSON array.
+
+proc discord::rest::ListToJsonArray { list type {meta {}} } {
+    set jsonArray [list]
+    switch $type {
+        object {
+            foreach element $list {
+                lappend jsonArray [DictToJson $element $meta]
+            }
+        }
+        array {
+            foreach element $list {
+                lappend jsonArray [ListToJsonArray $element $meta]
+            }
+        }
+        string {
+            foreach element $list {
+                lappend jsonArray [::json::write::string $element]
+            }
+        }
+        bare {
+            set jsonArray $list
+        }
+        default {
+            return -code error "Invalid array element type: $type"
+        }
+    }
+    return [::json::write::array {*}$jsonArray]
 }
