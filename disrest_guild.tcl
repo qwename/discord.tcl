@@ -8,6 +8,8 @@
 # See the file "LICENSE" for information on usage and redistribution of this
 # file.
 
+package require http
+
 # All data dictionary keys are required unless stated otherwise.
 
 # discord::rest::GetGuild --
@@ -183,12 +185,8 @@ proc discord::rest::GetGuildMember { token guildId userId {cmd {}} } {
 #       Passes a list of guild member dictionaries to the callback.
 
 proc discord::rest::ListGuildMembers { token guildId data {cmd {}} } {
-    set spec {
-            limit   bare
-            after   bare
-        }
-    set body [DictToJson $data $spec]
-    Send $token GET "/guilds/$guildId/members" $body $cmd
+    set query [::http::formatQuery {*}$data]
+    Send $token GET "/guilds/$guildId/members?$query" {} $cmd
 }
 
 # discord::rest::AddGuildMember --

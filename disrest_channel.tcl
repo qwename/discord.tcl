@@ -91,7 +91,7 @@ proc discord::rest::DeleteChannel { token channelId {cmd {}} } {
 #       Passes a list of message dictionaries to the callback.
 
 proc discord::rest::GetChannelMessages { token channelId data {cmd {}} } {
-    set query [http::formatQuery {*}$data]
+    set query [::http::formatQuery {*}$data]
     Send $token GET "/channels/$channelId/messages?$query" {} $cmd
 }
 
