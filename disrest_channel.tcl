@@ -202,7 +202,8 @@ proc discord::rest::EditMessage { token channelId messageId data {cmd {}} } {
             content string
         }
     set body [DictToJson $data $spec]
-    Send $token PATCH "/channels/$channelId/messages/$messageId" $body $cmd
+    Send $token PATCH "/channels/$channelId/messages/$messageId" $body $cmd \
+            -type "application/json"
 }
 
 # discord::rest::DeleteMessage --
