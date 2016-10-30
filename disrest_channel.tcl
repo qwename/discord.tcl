@@ -354,7 +354,8 @@ proc discord::rest::CreateChannelInvite { token channelId data {cmd {}} } {
 #       None.
 
 proc discord::rest::TriggerTypingIndicator { token channelId {cmd {}} } {
-    Send $token POST "/channels/$channelId/typing" {} $cmd
+    Send $token POST "/channels/$channelId/typing" {} $cmd \
+            -headers [list Content-Length 0]
 }
 
 # discord::rest::GetPinnedMessages --
