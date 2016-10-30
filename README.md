@@ -9,7 +9,7 @@ Supports Discord Gateway API version 6.
   - All events except Request Guild Members.
 - HTTP API
   - All Channel related requests.
-  - All Guild related requests except Batch Modify Guild Role.
+  - All Guild related requests.
   - All Invite related requests.
   - All User related requests.
   - All Voice related requests.

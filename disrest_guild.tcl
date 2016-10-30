@@ -133,8 +133,8 @@ proc discord::rest::CreateGuildChannel { token guildId data {cmd {}} } {
 # Arguments:
 #       token   Bot token or OAuth2 bearer token.
 #       guildId Guild ID.
-#       data    List of dictionaries representing a JSON objects. Each key is
-#               one of id, position.
+#       data    List of dictionaries representing JSON objects. Each key is one
+#               of id, position.
 #       cmd     (optional) callback procedure invoked after a response is
 #               received.
 #
@@ -366,6 +366,36 @@ proc discord::rest::GetGuildRoles { token guildId {cmd {}} } {
 
 proc discord::rest::CreateGuildRole { token guildId {cmd {}} } {
     Send $token POST "/guilds/$guildId/roles" {} $cmd
+}
+
+# discord::rest::BatchModifyGuildRole --
+#
+#       Batch modify a set of guild roles.
+#
+# Arguments:
+#       token   Bot token or OAuth2 bearer token.
+#       guildId Guild ID.
+#       data    List of dictionaries representing JSON objects. Each key is one
+#               of id, name, permissions, position, color, hoist, mentionable.
+#       cmd     (optional) callback procedure invoked after a response is
+#               received.
+#
+# Results:
+#       Passes a role dictionary to the callback.
+
+proc discord::rest::BatchModifyGuildRole { token guildId data {cmd {}} } {
+    set spec {
+            id          string
+            name        string
+            permissions bare
+            position    bare
+            color       bare
+            hoist       bare
+            mentionable bare
+        }
+    set body [ListToJsonArray $data object $spec]
+    Send $token PATCH "/guilds/$guildId/roles" $body $cmd \
+            -type "application/json"
 }
 
 # discord::rest::ModifyGuildRole --
