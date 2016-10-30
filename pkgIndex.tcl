@@ -21,5 +21,6 @@ package ifneeded discord 0.5.0 "
     source [file join $dir disrest_webhook.tcl] ;
     source [file join $dir discord_wrapper.tcl] ;
     source [file join $dir permissions.tcl] ;
+    source [file join $dir snowflake.tcl] ;
     source [file join $dir discord.tcl] ;
 "
