@@ -391,7 +391,8 @@ proc discord::rest::GetPinnedMessages { token channelId {cmd {}} } {
 
 proc discord::rest::AddPinnedChannelMessage { token channelId messageId \
         {cmd {}} } {
-    Send $token PUT "/channels/$channelId/pins/$messageId" {} $cmd
+    Send $token PUT "/channels/$channelId/pins/$messageId" {} $cmd \
+            -headers [list Content-Length 0]
 }
 
 # discord::rest::DeletePinnedChannelMessage --
