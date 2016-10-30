@@ -27,10 +27,10 @@ namespace eval discord {
 #       added.
 #
 # Arguments:
-#       name    Name of the procedure that will be created in the discord
+#       _name   Name of the procedure that will be created in the discord
 #               namespace.
-#       args    Arguments that the procedure will accept.
-#       body    Script to run.
+#       _args   Arguments that the procedure will accept.
+#       _body   Script to run.
 #
 # Results:
 #       A procedure discord::$name will be created, with these additions:
@@ -39,26 +39,26 @@ namespace eval discord {
 #       The variable "cmd" should be passed to discord::rest procedures that
 #       take a callback argument.
 
-proc discord::GenApiProc { name args body } {
-    set args [list sessionNs {*}$args {getResult 0}]
-    set setup {
+proc discord::GenApiProc { _name _args _body } {
+    set _args [list sessionNs {*}$_args {getResult 0}]
+    set _setup {
         if {$getResult == 1} {
-            set caller [uplevel info coroutine]
+            set _caller [uplevel info coroutine]
         } else {
-            set caller {}
+            set _caller {}
         }
         set cmd [list]
-        set name {}
-        if {$caller ne {}} {
-            set myName [lindex [info level 0] 0]
-            dict incr ${sessionNs}::WrapperCallCount $myName
-            set count [dict get [set ${sessionNs}::WrapperCallCount] $myName]
-            set name ${myName}$count
-            set cmd [list coroutine $name discord::rest::CallbackCoroutine \
-                    $caller]
+        set _coro {}
+        if {$_caller ne {}} {
+            set _myName [lindex [info level 0] 0]
+            dict incr ${sessionNs}::WrapperCallCount $_myName
+            set _count [dict get [set ${sessionNs}::WrapperCallCount] $_myName]
+            set _coro ${_myName}$_count
+            set cmd [list coroutine $_coro discord::rest::CallbackCoroutine \
+                    $_caller]
         }
     }
-    proc ::discord::$name $args "$setup\n$body\nreturn \$name"
+    proc ::discord::$_name $_args "$_setup\n$_body\nreturn \$_coro"
 }
 
 # Shared Arguments:
@@ -479,14 +479,17 @@ discord::GenApiProc getChannels { guildId } {
 # Arguments:
 #       sessionNs   Name of session namespace.
 #       guildId     Guild ID.
+#       name        Channel name.
 #       data        Dictionary representing a JSON object. Each key is one of
-#                   name, type, bitrate, user_limit, permission_overwrites.
+#                   type, bitrate, user_limit, permission_overwrites. All keys
+#                   are optional.
 #       getResult   See "Shared Arguments".
 #
 # Results:
 #       See "Shared Results".
 
-discord::GenApiProc createChannel { guildId data } {
+discord::GenApiProc createChannel { guildId name data } {
+    dict set data name $name
     rest::CreateGuildChannel [set ${sessionNs}::token] $guildId $data $cmd
 }
 
