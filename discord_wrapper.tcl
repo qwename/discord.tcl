@@ -9,7 +9,9 @@
 # file.
 
 namespace eval discord {
-    namespace export sendMessage deleteMessage createDM sendDM
+    namespace export getChannel modifyChannel deleteChannel closeDM \
+            getMessages getMessage sendMessage uploadFile editMessage \
+            deleteMessage createDM sendDM
     namespace ensemble create
 }
 
@@ -44,8 +46,9 @@ proc discord::GenApiProc { name args body } {
         set name {}
         if {$caller ne {}} {
             set myName [lindex [info level 0] 0]
-            set count [incr ${sessionNs}::WrapperCallCount::$myName]
-            set name ${sessionNs}::WrapperCoros::${myName}$count
+            dict incr ${sessionNs}::WrapperCallCount $myName
+            set count [dict get [set ${sessionNs}::WrapperCallCount] $myName]
+            set name ${myName}$count
             set cmd [list coroutine $name discord::rest::CallbackCoroutine \
                     $caller]
         }
@@ -67,6 +70,119 @@ proc discord::GenApiProc { name args body } {
 #       by calling the returned coroutine. Refer to
 #       discord::rest::CallbackCoroutine for more details.
 
+# discord::getChannel --
+#
+#       Get a channel by ID.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       channelId   Channel ID.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc getChannel { channelId } {
+    rest::GetChannel [set ${sessionNs}::token] $channelId $cmd
+}
+
+# discord::modifyChannel --
+#
+#       Update a channel's settings.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       channelId   Channel ID.
+#       data        Dictionary representing a JSON object. Each key is one of
+#                   name, position, topic, bitrate, user_limit. All keys are
+#                   optional.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc modifyChannel { channelId data } {
+    rest::ModifyChannel [set ${sessionNs}::token] $channelId $data $cmd
+}
+
+# discord::deleteChannel --
+#
+#       Delete a guild channel.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       channelId   Channel ID.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc deleteChannel { channelId } {
+    rest::DeleteChannel [set ${sessionNs}::token] $channelId $cmd
+}
+
+# discord::closeDM --
+#
+#       Close a DM channel.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       userId      User ID.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc closeDM { userId } {
+    set channelId {}
+    dict for {id dmChan} [set ${sessionNs}::dmChannels] {
+        set recipients [dict get $dmChan recipients]
+        if {[llength $recipients] > 1} {
+            continue
+        }
+        if {[dict get [lindex $recipients 0] id] eq $userId} {
+            set channelId [dict get $dmChan id]
+            break
+        }
+    }
+    rest::DeleteChannel [set ${sessionNs}::token] $channelId $cmd
+}
+
+# discord::getMessages --
+#
+#       Get the messages for a channel.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       channelId   Channel ID.
+#       data        Dictionary representing a JSON object. Each key is one of
+#                   around, before, after, limit. All keys are optional.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc getMessages { channelId data } {
+    rest::GetChannelMessages [set ${sessionNs}::token] $channelId $data $cmd
+}
+
+# discord::getMessage --
+#
+#       Get a channel message by ID.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       channelId   Channel ID.
+#       messageId   Message ID.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc getMessage { channelId messageId } {
+    rest::GetChannelMessage [set ${sessionNs}::token] $channelId $messageId $cmd
+}
+
 # discord::sendMessage --
 #
 #       Send a message to the channel.
@@ -83,6 +199,45 @@ proc discord::GenApiProc { name args body } {
 discord::GenApiProc sendMessage { channelId content } {
     rest::CreateMessage [set ${sessionNs}::token] $channelId \
             [dict create content $content] $cmd
+}
+
+# discord::uploadFile --
+#
+#       Upload a file to the channel.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       channelId   Channel ID.
+#       filename    Name of the file.
+#       type        Content-Type value.
+#       file        File data.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc uploadFile { channelId filename type file } {
+    rest::UploadFile [set ${sessionNs}::token] $channelId $filename $type \
+            $file $cmd
+}
+
+# discord::editMessage --
+#
+#       Edit a message in the channel.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       channelId   Channel ID.
+#       messageId   Message ID.
+#       content     New message content.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc editMessage { channelId messageId content } {
+    rest::EditMessage [set ${sessionNs}::token] $channelId $messageId $content \
+            $cmd
 }
 
 # discord::deleteMessage --
@@ -141,11 +296,9 @@ proc discord::sendDM { sessionNs userId content {getResult 0} } {
         if {[llength $recipients] > 1} {
             continue
         }
-        foreach recipient $recipients {
-            if {[dict get $recipient id] eq $userId} {
-                set channelId [dict get $dmChan id]
-                break
-            }
+        if {[dict get [lindex $recipients 0] id] eq $userId} {
+            set channelId [dict get $dmChan id]
+            break
         }
     }
     if {$channelId ne {}} {
