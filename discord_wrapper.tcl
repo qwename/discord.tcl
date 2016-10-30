@@ -11,8 +11,9 @@
 namespace eval discord {
     namespace export getChannel modifyChannel deleteChannel closeDM \
             getMessages getMessage sendMessage uploadFile editMessage \
-            deleteMessage bulkDeleteMessages editChannelPermissions createDM \
-            sendDM
+            deleteMessage bulkDeleteMessages editChannelPermissions \
+            deleteChannelPermission getChannelInvites createChannelInvite \
+            triggerTyping createDM sendDM
     namespace ensemble create
 }
 
@@ -278,7 +279,7 @@ discord::GenApiProc bulkDeleteMessages { channelId messageIds } {
 
 # discord::editChannelPermissions --
 #
-#       Edit the channel's permissions
+#       Edit the channel's permission overwrite.
 #
 # Arguments:
 #       sessionNs   Name of session namespace.
@@ -294,6 +295,74 @@ discord::GenApiProc bulkDeleteMessages { channelId messageIds } {
 discord::GenApiProc editChannelPermissions { channelId overwriteId data } {
     rest::EditChannelPermissions [set ${sessionNs}::token] $channelId \
             $overwriteId $data $cmd
+}
+
+# discord::deleteChannelPermission --
+#
+#       Delete permission overwrite for the channel.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       channelId   Channel ID.
+#       overwriteId Overwrite ID.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc deleteChannelPermission { channelId overwriteId } {
+    rest::DeleteChannelPermission [set ${sessionNs}::token] $channelId \
+            $overwriteId $cmd
+}
+
+# discord::getChannelInvites --
+#
+#       Get a list of invites for the channel.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       channelId   Channel ID.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc getChannelInvites { channelId } {
+    rest::GetChannelInvites [set ${sessionNs}::token] $channelId $cmd
+}
+
+# discord::createChannelInvite --
+#
+#       Create a new invite for the channel.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       channelId   Channel ID.
+#       data        Dictionary representing a JSON object. Each key is one of
+#                   max_age, max_uses, temporary, unique. All keys are optional.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc createChannelInvite { channelId data } {
+    rest::CreateChannelInvite [set ${sessionNs}::token] $channelId $data $cmd
+}
+
+# discord::triggerTyping --
+#
+#       Post a typing indicator to the channel.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       channelId   Channel ID.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc triggerTyping { channelId } {
+    rest::TriggerTypingIndicator [set ${sessionNs}::token] $channelId $cmd
 }
 
 # discord::createDM --
