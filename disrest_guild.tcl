@@ -426,7 +426,8 @@ proc discord::rest::ModifyGuildRole { token guildId roleId data {cmd {}} } {
             mentionable bare
         }
     set body [DictToJson $data $spec]
-    Send $token PATCH "/guilds/$guildId/roles/$roleId" $body $cmd
+    Send $token PATCH "/guilds/$guildId/roles/$roleId" $body $cmd \
+            -type "application/json"
 }
 
 # discord::rest::DeleteGuildRole --
