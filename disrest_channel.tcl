@@ -9,6 +9,7 @@
 # file.
 
 package require uuid
+package require http
 
 # All data dictionary keys are required unless stated otherwise.
 
@@ -90,14 +91,8 @@ proc discord::rest::DeleteChannel { token channelId {cmd {}} } {
 #       Passes a list of message dictionaries to the callback.
 
 proc discord::rest::GetChannelMessages { token channelId data {cmd {}} } {
-    set spec {
-            around  string
-            before  string
-            after   string
-            limit   bare
-        }
-    set body [DictToJson $data $spec]
-    Send $token GET "/channels/$channelId/messages" $body $cmd
+    set query [http::formatQuery {*}$data]
+    Send $token GET "/channels/$channelId/messages?$query" {} $cmd
 }
 
 # discord::rest::GetChannelMessage --
