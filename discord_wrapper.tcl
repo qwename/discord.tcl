@@ -16,7 +16,7 @@ namespace eval discord {
             triggerTyping getPinnedMessages pinMessage unpinMessage getGuild \
             modifyGuild getChannels createChannel changeChannelPositions \
             getMember getMembers addMember modifyMember kickMember getBans ban \
-            unban \
+            unban getRoles createRole batchModifyRoles modifyRole deleteRole \
             createDM sendDM
     namespace ensemble create
 }
@@ -568,6 +568,80 @@ discord::GenApiProc ban { guildId userId {delMsgDays 0} } {
 
 discord::GenApiProc unban { guildId userId } {
     rest::RemoveGuildBan [set ${sessionNs}::token] $guildId $userId $cmd
+}
+
+# discord::getRoles --
+#
+#       Get a list of roles for the guild.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc getRoles { guildId } {
+    rest::GetGuildRoles [set ${sessionNs}::token] $guildId $cmd
+}
+
+# discord::createRole --
+#
+#      Create a new empty role for the guild.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc createRole { guildId } {
+    rest::CreateGuildRole [set ${sessionNs}::token] $guildId $cmd
+}
+
+# discord::batchModifyRoles --
+#
+#      Batch modify a set of guild roles.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       data        List of dictionaries representing JSON objects. Each key is
+#                   one of id, name, permissions, position, color, hoist,
+#                   mentionable. All keys are optional.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc batchModifyRoles { guildId data } {
+    rest::BatchModifyGuildRole [set ${sessionNs}::token] $guildId $data $cmd
+}
+
+# discord::modifyRole --
+#
+#      Modify a guild role.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       roleId      Role ID.
+#       data        Dictionary representing a JSON object. Each key is one of
+#                   name, permissions, position, color, hoist, mentionable. All
+#                   keys are optional.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc modifyRole { guildId roleId data } {
+    rest::ModifyGuildRole [set ${sessionNs}::token] $guildId $roleId \
+            $data $cmd
+}
+
+# discord::deleteRole --
+#
+#      Delete a guild role.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       roleId      Role ID.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc deleteRole { guildId roleId } {
+    rest::DeleteGuildRole [set ${sessionNs}::token] $guildId $roleId $cmd
 }
 
 # discord::createDM --
