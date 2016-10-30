@@ -365,7 +365,8 @@ proc discord::rest::GetGuildRoles { token guildId {cmd {}} } {
 #       Passes a role object to the callback.
 
 proc discord::rest::CreateGuildRole { token guildId {cmd {}} } {
-    Send $token POST "/guilds/$guildId/roles" {} $cmd
+    Send $token POST "/guilds/$guildId/roles" {} $cmd \
+            -headers [list Content-Length 0]
 }
 
 # discord::rest::BatchModifyGuildRole --
@@ -377,6 +378,7 @@ proc discord::rest::CreateGuildRole { token guildId {cmd {}} } {
 #       guildId Guild ID.
 #       data    List of dictionaries representing JSON objects. Each key is one
 #               of id, name, permissions, position, color, hoist, mentionable.
+#               All keys are optional.
 #       cmd     (optional) callback procedure invoked after a response is
 #               received.
 #
