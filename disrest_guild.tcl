@@ -35,7 +35,7 @@ proc discord::rest::GetGuild { token guildId {cmd {}} } {
 #       token   Bot token or OAuth2 bearer token.
 #       guildId Guild ID.
 #       data    Dictionary representing a JSON object. Each key is one of
-#               name region, verification_level, default_message_notifications,
+#               name, region, verification_level, default_message_notifications,
 #               afk_channel_id, afk_timeout, icon, owner_id, splash. All keys
 #               are optional.
 #       cmd     (optional) callback procedure invoked after a response is
@@ -111,21 +111,14 @@ proc discord::rest::GetGuildChannels { token guildId {cmd {}} } {
 #       Passes a channel dictionary to the callback.
 
 proc discord::rest::CreateGuildChannel { token guildId data {cmd {}} } {
-    if {[dict exists $data permission_overwrites]} {
-        set poJsonList [list]
-        foreach permOverwrite [dict get $data permission_overwrites] {
-            lappend poJsonList [DictToJson $permOverwrite \
-                    [dict get $::discord::JsonSpecs overwrite]]
-        }
-        dict set data permission_overwrites $poJsonList
-    }
     set spec {
             name                    string
             type                    string
             bitrate                 bare
             user_limit              bare
-            permission_overwrites   {array bare}
         }
+    dict set spec permission_overwrites [list array [list object \
+            [dict get $::discord::JsonSpecs overwrite]]]
     set body [DictToJson $data $spec]
     Send $token POST "/guilds/$guildId/channels" $body $cmd \
             -type "application/json"
