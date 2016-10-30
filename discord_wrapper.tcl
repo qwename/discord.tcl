@@ -15,7 +15,7 @@ namespace eval discord {
             deleteChannelPermission getChannelInvites createChannelInvite \
             triggerTyping getPinnedMessages pinMessage unpinMessage getGuild \
             modifyGuild getChannels createChannel changeChannelPositions \
-            getMember getMembers addMember modifyMember removeMember \
+            getMember getMembers addMember modifyMember kickMember \
             createDM sendDM
     namespace ensemble create
 }
@@ -553,6 +553,64 @@ discord::GenApiProc getMember { guildId userId } {
 discord::GenApiProc getMembers { guildId {limit 1} {after 0} } {
     rest::ListGuildMembers [set ${sessionNs}::token] $guildId \
             [dict create limit $limit after $after] $cmd
+}
+
+# discord::addMember --
+#
+#       Add a user to the guild.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       userId      User ID.
+#       accessToken OAuth2 access token.
+#       data        Dictionary representing a JSON object. Each key is one of
+#                   nick, roles, mute, deaf. All keys are optional.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc addMember { guildId userId accessToken data } {
+    dict set data access_token $accessToken
+    rest::AddGuildMember [set ${sessionNs}::token] $guildId $userId $data $cmd
+}
+
+# discord::modifyMember --
+#
+#       Modify attributes of a guild member.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       userId      User ID.
+#       data        Dictionary representing a JSON object. Each key is one of
+#                   nick, roles, mute, deaf, channel_id. All keys are optional.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc modifyMember { guildId userId data } {
+    rest::ModifyGuildMember [set ${sessionNs}::token] $guildId $userId $data \
+            $cmd
+}
+
+# discord::kickMember --
+#
+#       Remove a member from the guild.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       userId      User ID.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc kickMember { guildId userId } {
+    rest::RemoveGuildMember [set ${sessionNs}::token] $guildId $userId $cmd
 }
 
 # discord::createDM --
