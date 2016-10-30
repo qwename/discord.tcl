@@ -71,3 +71,9 @@ test ListToJsonArray-1.7 {Two elements, type object} -body {
     discord::rest::ListToJsonArray [list [dict create id 123] \
             [dict create id 456]] object [dict create id string]
 } -result {[{"id":"123"},{"id":"456"}]}
+
+test ListToJsonArray-1.8 {One element, type array, subtype object} -body {
+    discord::rest::ListToJsonArray [list [list [dict create id 123] \
+            [dict create id 456]] [list [dict create id abc] \
+            [dict create id def]]] array [list object [dict create id string]]
+} -result {[[{"id":"123"},{"id":"456"}],[{"id":"abc"},{"id":"def"}]]}
