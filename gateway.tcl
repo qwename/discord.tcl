@@ -71,6 +71,10 @@ namespace eval discord::gateway {
         USER_UPDATE                 {}
         VOICE_STATE_UPDATE          {}
         VOICE_SERVER_UPDATE         {}
+
+        MESSAGE_ACK                 {}
+        CHANNEL_PINS_ACK            {}
+        CHANNEL_PINS_UPDATE         {}
     }
 
     # Compression only used for Dispatch "READY" event. Set DefCompress to true
