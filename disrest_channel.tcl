@@ -257,7 +257,7 @@ proc discord::rest::BulkDeleteMessages { token channelId data {cmd {}} } {
 #       channelId   Channel ID.
 #       overwriteId Overwrite ID.
 #       data        Dictionary representing a JSON object. Each key is one of
-#                   allow, deny, type.
+#                   allow, deny, type. All keys are optional
 #       cmd         (optional) callback procedure invoked after a response is
 #                   received.
 #
@@ -272,7 +272,8 @@ proc discord::rest::EditChannelPermissions { token channelId overwriteId data \
             type    string
     }
     set body [DictToJson $data $spec]
-    Send $token POST "/channels/$channelId/permissions/$overwriteId" $body $cmd
+    Send $token PUT "/channels/$channelId/permissions/$overwriteId" $body $cmd \
+            -type "application/json"
 }
 
 # discord::rest::DeleteChannelPermission --
