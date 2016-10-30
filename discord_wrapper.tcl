@@ -236,8 +236,8 @@ discord::GenApiProc uploadFile { channelId filename type file } {
 #       See "Shared Results".
 
 discord::GenApiProc editMessage { channelId messageId content } {
-    rest::EditMessage [set ${sessionNs}::token] $channelId $messageId $content \
-            $cmd
+    rest::EditMessage [set ${sessionNs}::token] $channelId $messageId \
+            [dict create content $content] $cmd
 }
 
 # discord::deleteMessage --
