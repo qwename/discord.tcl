@@ -174,14 +174,15 @@ proc discord::rest::SendCallback { sendId token } {
             if {$ncode >= 300} {
                 ${log}::warn [join [list \
                         "SendCallback${sendId}: $url: $code:" \
-                        [array get $token body]]]
+                        [::http::data $token]]]
                 if {[llength $cmd] > 0} {
                     after idle [list {*}$cmd {} $state]
                 }
             } else {
                 ${log}::debug "SendCallback${sendId}: $url: $code"
                 if {[llength $cmd] > 0} {
-                    if {[catch {json::json2dict [::http::data $token]} data]} {
+                    set data [::http::data $token]
+                    if {$data ne {} && [catch {json::json2dict $data} data]} {
                         ${log}::error "SendCallback${sendId}: $url: $data"
                         set data {}
                     }
