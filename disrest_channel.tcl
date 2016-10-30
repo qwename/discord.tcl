@@ -336,7 +336,8 @@ proc discord::rest::CreateChannelInvite { token channelId data {cmd {}} } {
             unique      bare
         }
     set body [DictToJson $data $spec]
-    Send $token POST "/channels/$channelId/invites" $body $cmd
+    Send $token POST "/channels/$channelId/invites" $body $cmd \
+            -type "application/json"
 }
 
 # discord::rest::TriggerTypingIndicator --
