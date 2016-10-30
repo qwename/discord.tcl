@@ -1,4 +1,4 @@
-# Commands covered: DictToJson
+# Commands covered: DictToJson, ListToJsonArray
 #
 # disrest.test --
 #
@@ -40,3 +40,34 @@ test DictToJson-1.4 {One key, type array of strings} -body {
     discord::rest::DictToJson [dict create ids [list 1 2 3]] \
             [dict create ids [list array string]]
 } -result {{"ids":["1","2","3"]}}
+
+test ListToJsonArray-1.1 {Empty list} -body {
+    discord::rest::ListToJsonArray [list] string
+} -result {[]}
+
+test ListToJsonArray-1.2 {One element, type string} -body {
+    discord::rest::ListToJsonArray [list foo] string
+} -result {["foo"]}
+
+test ListToJsonArray-1.3 {One element, type array, subtype string} -body {
+    discord::rest::ListToJsonArray [list [list foo bar]] array string
+} -result {[["foo","bar"]]}
+
+test ListToJsonArray-1.4 {One element, type object} -body {
+    discord::rest::ListToJsonArray [list [dict create id 123]] object \
+            [dict create id string]
+} -result {[{"id":"123"}]}
+
+test ListToJsonArray-1.5 {Two elements, type string} -body {
+    discord::rest::ListToJsonArray [list foo bar] string
+} -result {["foo","bar"]}
+
+test ListToJsonArray-1.6 {Two elements, type array, subtype string} -body {
+    discord::rest::ListToJsonArray [list [list foo bar] [list alice bob]] \
+            array string
+} -result {[["foo","bar"],["alice","bob"]]}
+
+test ListToJsonArray-1.7 {Two elements, type object} -body {
+    discord::rest::ListToJsonArray [list [dict create id 123] \
+            [dict create id 456]] object [dict create id string]
+} -result {[{"id":"123"},{"id":"456"}]}
