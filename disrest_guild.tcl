@@ -138,8 +138,8 @@ proc discord::rest::CreateGuildChannel { token guildId data {cmd {}} } {
 # Arguments:
 #       token   Bot token or OAuth2 bearer token.
 #       guildId Guild ID.
-#       data    Dictionary representing a JSON object. Each key is one of
-#               id, position.
+#       data    List of dictionaries representing a JSON objects. Each key is
+#               one of id, position.
 #       cmd     (optional) callback procedure invoked after a response is
 #               received.
 #
@@ -151,8 +151,9 @@ proc discord::rest::ModifyGuildChannelPosition { token guildId data {cmd {}} } {
             id          string
             position    bare
         }
-    set body [DictToJson $data $spec]
-    Send $token PATCH "/guilds/$guildId/channels" $body $cmd
+    set body [ListToJsonArray $data object $spec]
+    Send $token PATCH "/guilds/$guildId/channels" $body $cmd \
+            -type "application/json"
 }
 
 # discord::rest::GetGuildMember --
