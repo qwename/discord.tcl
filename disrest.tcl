@@ -127,11 +127,11 @@ proc discord::rest::Send { token verb resource {body {}} {cmd {}} args } {
     set command [list ::http::geturl $url \
             -headers [list Authorization "Bot $token" {*}$moreHeaders] \
             -method $verb \
-            -command $callbackName \
             {*}$moreOptions]
     if {$body ne {}} {
         lappend command -query $body
     }
+    lappend command -command $callbackName
     ${log}::debug "Send: $route: $command"
     {*}$command
     return
