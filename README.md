@@ -21,7 +21,7 @@ Supports Discord Gateway API version 6.
 ### Libraries
 
 - [Tcllib 1.18](http://www.tcl.tk/software/tcllib) (*websocket*, *json*,
-    *json::write*, *logger*)
+    *json::write*, *logger*, *uuid*)
 - [TLS 1.6.7](https://sourceforge.net/projects/tls) (*tls*)
 
 ### Usage
