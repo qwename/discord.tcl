@@ -247,7 +247,8 @@ proc discord::rest::CallbackCoroutine { coroutine data state } {
 #               is required. Field types are one of object, array, string, bare.
 #               Actions for each field type on the value:
 #               object: Call DictToJson on the value with metadata as spec.
-#               array: metadata must be one of object, array, string, bare.
+#               array: metadata must be one of [list object spec],
+#                   [list array [list type meta]], string, bare.
 #                   Performs the relevant action for the type.
 #               string: Apply json::write::string.
 #               bare: Nothing is done.
@@ -281,7 +282,7 @@ proc discord::rest::DictToJson { data spec {indent false} } {
                 set value [DictToJson $value $meta $indent]
             }
             array {
-                set value [ListToJsonArray $value $meta]
+                set value [ListToJsonArray $value {*}$meta]
             }
             string {
                 set value [::json::write::string $value]
@@ -304,9 +305,9 @@ proc discord::rest::DictToJson { data spec {indent false} } {
 # Arguments:
 #       list    List of elements to seralize.
 #       type    The type to serialize each element into.
-#       meta    (optional) subtype if type is array, or JSON specification if
-#               type is object. Refer to discord::rest::DictToJson's spec
-#               argument for details.
+#       meta    (optional) type and meta of subarrays if type is array, or JSON
+#               specification if type is object. Refer to
+#               discord::rest::DictToJson's spec argument for details.
 #
 # Results:
 #       Returns a JSON array.
@@ -320,8 +321,9 @@ proc discord::rest::ListToJsonArray { list type {meta {}} } {
             }
         }
         array {
+            lassign $meta subtype submeta
             foreach element $list {
-                lappend jsonArray [ListToJsonArray $element $meta]
+                lappend jsonArray [ListToJsonArray $element $subtype $submeta]
             }
         }
         string {
