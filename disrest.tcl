@@ -89,7 +89,6 @@ proc discord::rest::Send { token verb resource {body {}} {cmd {}} args } {
                 set resetTime [dict get $RateLimits $token $route \
                         X-RateLimit-Reset]
                 set secsRemain [expr {$resetTime - [clock seconds]}]
-                puts "$secsRemain"
                 if {$secsRemain >= -3} {
                     ${log}::warn [join [list "Send: Rate-limited on /$route," \
                             "reset in $secsRemain seconds"]]
