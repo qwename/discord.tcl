@@ -13,7 +13,8 @@ namespace eval discord {
             getMessages getMessage sendMessage uploadFile editMessage \
             deleteMessage bulkDeleteMessages editChannelPermissions \
             deleteChannelPermission getChannelInvites createChannelInvite \
-            triggerTyping createDM sendDM
+            triggerTyping getPinnedMessages pinMessage unpinMessage \
+            createDM sendDM
     namespace ensemble create
 }
 
@@ -363,6 +364,58 @@ discord::GenApiProc createChannelInvite { channelId data } {
 
 discord::GenApiProc triggerTyping { channelId } {
     rest::TriggerTypingIndicator [set ${sessionNs}::token] $channelId $cmd
+}
+
+# discord::getPinnedMessages --
+#
+#       Get all pinned messages in the channel.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       channelId   Channel ID.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc getPinnedMessages { channelId } {
+    rest::GetPinnedMessages [set ${sessionNs}::token] $channelId $cmd
+}
+
+# discord::pinMessage --
+#
+#       Pin a message in the channel.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       channelId   Channel ID.
+#       messageId   Message ID.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc pinMessage { channelId messageId } {
+    rest::AddPinnedChannelMessage [set ${sessionNs}::token] $channelId \
+            $messageId $cmd
+}
+
+# discord::unpinMessage --
+#
+#       Unpin message in the channel.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       channelId   Channel ID.
+#       messageId   Message ID.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc unpinMessage { channelId messageId } {
+    rest::DeletePinnedChannelMessage [set ${sessionNs}::token] $channelId \
+            $messageId $cmd
 }
 
 # discord::createDM --
