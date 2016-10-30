@@ -17,6 +17,8 @@ Supports Discord Gateway API version 6.
 - Callbacks can be registered for all Dispatch events
 - Event callbacks not implemented: Typing Start, User Settings Update,
   Voice State Update, Voice Server Update.
+- Library API not implemented (for whitelisted bots): Group DM Add/Remove
+  Recipient, Create Guild
 
 ### Libraries
 
