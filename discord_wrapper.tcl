@@ -15,7 +15,8 @@ namespace eval discord {
             deleteChannelPermission getChannelInvites createChannelInvite \
             triggerTyping getPinnedMessages pinMessage unpinMessage getGuild \
             modifyGuild getChannels createChannel changeChannelPositions \
-            getMember getMembers addMember modifyMember kickMember \
+            getMember getMembers addMember modifyMember kickMember getBans ban \
+            unban \
             createDM sendDM
     namespace ensemble create
 }
@@ -611,6 +612,58 @@ discord::GenApiProc modifyMember { guildId userId data } {
 
 discord::GenApiProc kickMember { guildId userId } {
     rest::RemoveGuildMember [set ${sessionNs}::token] $guildId $userId $cmd
+}
+
+# discord::getBans --
+#
+#       Get a list of users that are banned from the guild.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc getBans { guildId } {
+    rest::GetGuildBans [set ${sessionNs}::token] $guildId $cmd
+}
+
+# discord::ban --
+#
+#       Create a guild ban.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       userId      User ID.
+#       delMsgDays  Number of days to delete messages for.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc ban { guildId userId {delMsgDays 0} } {
+    rest::CreateGuildBan [set ${sessionNs}::token] $guildId $userId \
+            [dict create delete-message-days $delMsgDays] $cmd
+}
+
+# discord::unban --
+#
+#       Remove the ban for a user.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       userId      User ID.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc unban { guildId userId } {
+    rest::RemoveGuildBan [set ${sessionNs}::token] $guildId $userId $cmd
 }
 
 # discord::createDM --
