@@ -14,7 +14,8 @@ namespace eval discord {
             deleteMessage bulkDeleteMessages editChannelPermissions \
             deleteChannelPermission getChannelInvites createChannelInvite \
             triggerTyping getPinnedMessages pinMessage unpinMessage getGuild \
-            modifyGuild createDM sendDM
+            modifyGuild getChannels createChannel changeChannelPositions \
+            createDM sendDM
     namespace ensemble create
 }
 
@@ -440,7 +441,7 @@ discord::GenApiProc getGuild { guildId } {
 #
 # Arguments:
 #       sessionNs   Name of session namespace.
-#       guildId     Guild ID
+#       guildId     Guild ID.
 #       data        Dictionary representing a JSON object. Each key is one of
 #                   name, region, verification_level,
 #                   default_message_notifications, afk_channel_id, afk_timeout,
@@ -452,6 +453,64 @@ discord::GenApiProc getGuild { guildId } {
 
 discord::GenApiProc modifyGuild { guildId data } {
     rest::ModifyGuild [set ${sessionNs}::token] $guildId $data $cmd
+}
+
+# discord::getChannels --
+#
+#       Get a list of channels in the guild.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc getChannels { guildId } {
+    rest::GetGuildChannels [set ${sessionNs}::token] $guildId $cmd
+}
+
+# discord::createChannel --
+#
+#       Create a new channel for the guild.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       data        Dictionary representing a JSON object. Each key is one of
+#                   name, type, bitrate, user_limit, permission_overwrites.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc createChannel { guildId data } {
+    rest::CreateGuildChannel [set ${sessionNs}::token] $guildId $data $cmd
+}
+
+# discord::changeChannelPositions --
+#
+#       Change the position of the guild channels.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       data        List of sublists, each sublist contains the channel ID and
+#                   the new position. All affected channels must be specified.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc changeChannelPositions { guildId data } {
+    set positions [list]
+    foreach list $data {
+        lassign $list channelId position
+        lappend positions [dict create id $channelId position $position]
+    }
+    rest::ModifyGuildChannelPosition  [set ${sessionNs}::token] $guildId \
+            $positions $cmd
 }
 
 # discord::createDM --
