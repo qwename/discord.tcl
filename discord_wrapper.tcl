@@ -13,8 +13,8 @@ namespace eval discord {
             getMessages getMessage sendMessage uploadFile editMessage \
             deleteMessage bulkDeleteMessages editChannelPermissions \
             deleteChannelPermission getChannelInvites createChannelInvite \
-            triggerTyping getPinnedMessages pinMessage unpinMessage \
-            createDM sendDM
+            triggerTyping getPinnedMessages pinMessage unpinMessage getGuild \
+            modifyGuild createDM sendDM
     namespace ensemble create
 }
 
@@ -416,6 +416,42 @@ discord::GenApiProc pinMessage { channelId messageId } {
 discord::GenApiProc unpinMessage { channelId messageId } {
     rest::DeletePinnedChannelMessage [set ${sessionNs}::token] $channelId \
             $messageId $cmd
+}
+
+# discord::getGuild --
+#
+#       Get a guild by ID.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc getGuild { guildId } {
+    rest::GetGuild [set ${sessionNs}::token] $guildId $cmd
+}
+
+# discord::modifyGuild --
+#
+#       Modify a guild's settings.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID
+#       data        Dictionary representing a JSON object. Each key is one of
+#                   name, region, verification_level,
+#                   default_message_notifications, afk_channel_id, afk_timeout,
+#                   icon, owner_id, splash. All keys are optional.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc modifyGuild { guildId data } {
+    rest::ModifyGuild [set ${sessionNs}::token] $guildId $data $cmd
 }
 
 # discord::createDM --
