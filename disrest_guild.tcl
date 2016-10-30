@@ -57,7 +57,7 @@ proc discord::rest::ModifyGuild { token guildId data {cmd {}} } {
             splash                          string
         }
     set body [DictToJson $data $spec]
-    Send $token PATCH "/guilds/$guildId" $body $cmd
+    Send $token PATCH "/guilds/$guildId" $body $cmd -type "application/json"
 }
 
 # discord::rest::DeleteGuild --
