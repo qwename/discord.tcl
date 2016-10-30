@@ -11,7 +11,7 @@
 namespace eval discord {
     namespace export getChannel modifyChannel deleteChannel closeDM \
             getMessages getMessage sendMessage uploadFile editMessage \
-            deleteMessage createDM sendDM
+            deleteMessage bulkDeleteMessages createDM sendDM
     namespace ensemble create
 }
 
@@ -255,6 +255,24 @@ discord::GenApiProc editMessage { channelId messageId content } {
 
 discord::GenApiProc deleteMessage { channelId messageId } {
     rest::DeleteMessage [set ${sessionNs}::token] $channelId $messageId $cmd
+}
+
+# discord::bulkDeleteMessages --
+#
+#       Bulk delete messages from the channel.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       channelId   Channel ID.
+#       messageIds  List of Message IDs.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc bulkDeleteMessages { channelId messageIds } {
+    rest::BulkDeleteMessages [set ${sessionNs}::token] $channelId \
+            [dict create messages $messageIds] $cmd
 }
 
 # discord::createDM --
