@@ -207,23 +207,17 @@ proc discord::rest::ListGuildMembers { token guildId data {cmd {}} } {
 #       Passes a guild member dictionary to the callback.
 
 proc discord::rest::AddGuildMember { token guildId userId data {cmd {}} } {
-    if {[dict exists $data roles]} {
-        set roleJsonList [list]
-        foreach role [dict get $data roles] {
-            lappend roleJsonList [DictToJson $role \
-                    [dict get $::discord::JsonSpecs role]]
-        }
-        dict set data roles $roleJsonList
-    }
     set spec {
             access_token    string
             nick            string
-            roles           {array bare}
             mute            bare
             deaf            bare
         }
+    dict set spec roles [list array [list object \
+            [dict get $::discord::JsonSpecs role]]]
     set body [DictToJson $data $spec]
-    Send $token PUT "/guilds/$guildId/members/$userId" $body $cmd
+    Send $token PUT "/guilds/$guildId/members/$userId" $body $cmd \
+            -type "application/json"
 }
 
 # discord::rest::ModifyGuildMember --
@@ -259,7 +253,8 @@ proc discord::rest::ModifyGuildMember { token guildId userId data {cmd {}} } {
             channel_id  string
         }
     set body [DictToJson $data $spec]
-    Send $token PATCH "/guilds/$guildId/members/$userId" $body $cmd
+    Send $token PATCH "/guilds/$guildId/members/$userId" $body $cmd \
+            -type "application/json"
 }
 
 # discord::rest::RemoveGuildMember --
