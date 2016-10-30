@@ -15,6 +15,7 @@ namespace eval discord {
             deleteChannelPermission getChannelInvites createChannelInvite \
             triggerTyping getPinnedMessages pinMessage unpinMessage getGuild \
             modifyGuild getChannels createChannel changeChannelPositions \
+            getMember getMembers addMember modifyMember removeMember \
             createDM sendDM
     namespace ensemble create
 }
@@ -511,6 +512,44 @@ discord::GenApiProc changeChannelPositions { guildId data } {
     }
     rest::ModifyGuildChannelPosition  [set ${sessionNs}::token] $guildId \
             $positions $cmd
+}
+
+# discord::getMember --
+#
+#       Get a guild member by user ID.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       userId      User ID.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc getMember { guildId userId } {
+    rest::GetGuildMember [set ${sessionNs}::token] $guildId $userId $cmd
+}
+
+# discord::getMembers --
+#
+#       Get a list of guild members.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       limit       (optional) maximum number of members to return. Defaults to
+#                   1.
+#       after       (optional) user ID. Only include members after this ID.
+#                   Defaults to 0.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc getMembers { guildId {limit 1} {after 0} } {
+    rest::ListGuildMembers [set ${sessionNs}::token] $guildId \
+            [dict create limit $limit after $after] $cmd
 }
 
 # discord::createDM --
