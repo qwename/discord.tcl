@@ -8,6 +8,10 @@
 # file.
 
 namespace eval discord {
+    namespace export getPermissions setPermissions hasPermissions \
+            getPermissionDescription
+    namespace ensemble create
+
     variable PermissionInfo {
         CREATE_INSTANT_INVITE   0x00000001  {
             Allows creation of instant invites.
@@ -96,7 +100,7 @@ namespace eval discord {
     }
 }
 
-# discord::GetPermissions --
+# discord::getPermissions --
 #
 #       Get a list of permissions for the permissions integer.
 #
@@ -122,7 +126,7 @@ proc discord::GetPermissions { permissions } {
     return $permList
 }
 
-# discord::SetPermissions --
+# discord::setPermissions --
 #
 #       Add permissions to an existing permissions integer.
 #
@@ -134,7 +138,7 @@ proc discord::GetPermissions { permissions } {
 #       Returns the new permissions integer, or raises an error if the
 #       permissions integer is invalid.
 
-proc discord::SetPermissions { permissions permList } {
+proc discord::setPermissions { permissions permList } {
     if {![string is integer -strict $permissions]} {
         return -code error "Not an integer: $permissions"
     }
@@ -148,7 +152,7 @@ proc discord::SetPermissions { permissions permList } {
     return $permissions
 }
 
-# discord::HasPermissions --
+# discord::hasPermissions --
 #
 #       Check if a permissions integer matches the minimum number of permissions
 #       in the permission token list.
@@ -164,7 +168,7 @@ proc discord::SetPermissions { permissions permList } {
 #       of matches, or 0 otherwise. An error will be raised if the permissions
 #       integer is invalid.
 
-proc discord::HasPermissions { permissions permList {minMatch 0} } {
+proc discord::hasPermissions { permissions permList {minMatch 0} } {
     if {![string is integer -strict $permissions]} {
         return -code error "Not an integer: $permissions"
     }
@@ -191,7 +195,7 @@ proc discord::HasPermissions { permissions permList {minMatch 0} } {
             || ($minMatch != 0 && $permMatch >= $minMatch)}]
 }
 
-# discord::GetPermissionDescription --
+# discord::getPermissionDescription --
 #
 #       Get the description for a permission.
 #
@@ -202,7 +206,7 @@ proc discord::HasPermissions { permissions permList {minMatch 0} } {
 #       Returns the description string for the permission, or raises an error if
 #       the permission is invalid.
 
-proc discord::GetPermissionDescription { permission } {  
+proc discord::getPermissionDescription { permission } {  
     variable PermissionDescriptions
     if {[dict exists $PermissionDescriptions $permission]} {
         return [dict get $PermissionDescriptions $permission]
