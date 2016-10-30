@@ -20,6 +20,8 @@ package require logger
 namespace eval discord::rest {
     variable log [logger::init discord::rest]
 
+    set HttpApiVersion 6
+
     variable SendId 0
     variable SendInfo [dict create]
 
@@ -118,7 +120,8 @@ proc discord::rest::Send { token verb resource {body {}} {cmd {}} args } {
     set callbackName ::discord::rest::SendCallback${sendId}
     interp alias {} $callbackName {} ::discord::rest::SendCallback $sendId
 
-    set url "${::discord::ApiBaseUrl}${resource}"
+    variable HttpApiVersion
+    set url "$::discord::ApiBaseUrl/v${HttpApiVersion}$resource"
     dict set SendInfo $sendId [dict create cmd $cmd url $url token $token \
             route $route]
     set command [list ::http::geturl $url \
