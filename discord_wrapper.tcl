@@ -11,7 +11,8 @@
 namespace eval discord {
     namespace export getChannel modifyChannel deleteChannel closeDM \
             getMessages getMessage sendMessage uploadFile editMessage \
-            deleteMessage bulkDeleteMessages createDM sendDM
+            deleteMessage bulkDeleteMessages editChannelPermissions createDM \
+            sendDM
     namespace ensemble create
 }
 
@@ -273,6 +274,26 @@ discord::GenApiProc deleteMessage { channelId messageId } {
 discord::GenApiProc bulkDeleteMessages { channelId messageIds } {
     rest::BulkDeleteMessages [set ${sessionNs}::token] $channelId \
             [dict create messages $messageIds] $cmd
+}
+
+# discord::editChannelPermissions --
+#
+#       Edit the channel's permissions
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       channelId   Channel ID.
+#       overwriteId Overwrite ID.
+#       data        Dictionary representing a JSON object. Each key is one of
+#                   allow, deny, type. All keys are optional.
+#       getResult   See "Shared Arguments".
+#
+# Results:
+#       See "Shared Results".
+
+discord::GenApiProc editChannelPermissions { channelId overwriteId data } {
+    rest::EditChannelPermissions [set ${sessionNs}::token] $channelId \
+            $overwriteId $data $cmd
 }
 
 # discord::createDM --
