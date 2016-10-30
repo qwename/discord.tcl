@@ -243,7 +243,8 @@ proc discord::rest::BulkDeleteMessages { token channelId data {cmd {}} } {
             messages    {array string}
         }
     set body [DictToJson $data $spec]
-    Send $token POST "/channels/$channelId/messages/bulk-delete" $data $cmd
+    Send $token POST "/channels/$channelId/messages/bulk-delete" $body $cmd \
+            -type "application/json"
 }
 
 # discord::rest::EditChannelPermissions --
