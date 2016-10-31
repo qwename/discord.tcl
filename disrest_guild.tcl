@@ -465,11 +465,8 @@ proc discord::rest::DeleteGuildRole { token guildId roleId {cmd {}} } {
 #       Passes a dictionary with the key 'pruned' to the callback.
 
 proc discord::rest::GetGuildPruneCount { token guildId data {cmd {}} } {
-    set spec {
-            days    bare
-        }
-    set body [DictToJson $data $spec]
-    Send $token GET "/guilds/$guildId/prune" $body $cmd
+    set query [::http::formatQuery {*}$data]
+    Send $token GET "/guilds/$guildId/prune?$query" {} $cmd
 }
 
 # discord::rest::BeginGuildPrune --
@@ -488,11 +485,9 @@ proc discord::rest::GetGuildPruneCount { token guildId data {cmd {}} } {
 #       Passes a dictionary with the key 'pruned' to the callback.
 
 proc discord::rest::BeginGuildPrune { token guildId data {cmd {}} } {
-    set spec {
-            days    bare
-        }
-    set body [DictToJson $data $spec]
-    Send $token POST "/guilds/$guildId/prune" $body $cmd
+    set query [::http::formatQuery {*}$data]
+    Send $token POST "/guilds/$guildId/prune?$query" {} $cmd \
+            -headers [list Content-Length 0]
 }
 
 # discord::rest::GetGuildVoiceRegions --
