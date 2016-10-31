@@ -17,7 +17,7 @@ namespace eval discord {
             modifyGuild getChannels createChannel changeChannelPositions \
             getMember getMembers addMember modifyMember kickMember getBans ban \
             unban getRoles createRole batchModifyRoles modifyRole deleteRole \
-            createDM sendDM
+            getPruneCount prune createDM sendDM
     namespace ensemble create
 }
 
@@ -642,6 +642,36 @@ discord::GenApiProc modifyRole { guildId roleId data } {
 
 discord::GenApiProc deleteRole { guildId roleId } {
     rest::DeleteGuildRole [set ${sessionNs}::token] $guildId $roleId $cmd
+}
+
+# discord::getPruneCount --
+#
+#      Get the number of members that would be removed in a prune operation.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       days        (optional) number of days to count prune for. Defauls to 1.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc getPruneCount { guildId {days 1} } {
+    rest::GetGuildPruneCount [set ${sessionNs}::token] $guildId \
+            [dict create days $days] $cmd
+}
+
+# discord::prune --
+#
+#      Begin a prune operation.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       days        (optional) number of days to count prune for. Defauls to 1.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc prune { guildId {days 1} } {
+    rest::BeginGuildPrune [set ${sessionNs}::token] $guildId \
+            [dict create days $days] $cmd
 }
 
 # discord::createDM --
