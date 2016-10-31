@@ -628,7 +628,8 @@ proc discord::rest::DeleteGuildIntegration { token guildId integrationId \
 
 proc discord::rest::SyncGuildIntegration { token guildId integrationId \
         {cmd {}} } {
-    Send $token POST "/guilds/$guildId/integrations/$integrationId/sync" {} $cmd
+    Send $token POST "/guilds/$guildId/integrations/$integrationId/sync" {} \
+            $cmd -headers [list Content-Length 0]
 }
 
 # discord::rest::GetGuildEmbed --
