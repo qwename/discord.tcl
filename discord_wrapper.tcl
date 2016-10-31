@@ -19,7 +19,8 @@ namespace eval discord {
             unban getRoles createRole batchModifyRoles modifyRole deleteRole \
             getPruneCount prune getVoiceRegions getGuildInvites \
             getIntegrations createIntegration modifyIntegration \
-            deleteIntegration syncIntegration createDM sendDM
+            deleteIntegration syncIntegration getGuildEmbed modifyGuildEmbed \
+            createDM sendDM
     namespace ensemble create
 }
 
@@ -741,7 +742,7 @@ discord::GenApiProc createIntegration { guildId data } {
 #       data            Dictionary representing a JSON object. Each key is one
 #                       of expire_behavior, expire_grace_period,
 #                       enable_emoticons.
-#       getResult   See "Shared Arguments".
+#       getResult       See "Shared Arguments".
 
 discord::GenApiProc modifyIntegration { guildId integrationId data } {
     rest::ModifyGuildIntegration [set ${sessionNs}::token] $guildId \
@@ -756,7 +757,7 @@ discord::GenApiProc modifyIntegration { guildId integrationId data } {
 #       sessionNs       Name of session namespace.
 #       guildId         Guild ID.
 #       integrationId   Integration ID.
-#       getResult   See "Shared Arguments".
+#       getResult       See "Shared Arguments".
 
 discord::GenApiProc deleteIntegration { guildId integrationId } {
     rest::DeleteGuildIntegration [set ${sessionNs}::token] $guildId \
@@ -771,11 +772,39 @@ discord::GenApiProc deleteIntegration { guildId integrationId } {
 #       sessionNs       Name of session namespace.
 #       guildId         Guild ID.
 #       integrationId   Integration ID.
-#       getResult   See "Shared Arguments".
+#       getResult       See "Shared Arguments".
 
 discord::GenApiProc syncIntegration { guildId integrationId } {
     rest::SyncGuildIntegration [set ${sessionNs}::token] $guildId \
             $integrationId $cmd
+}
+
+# discord::getGuildEmbed --
+#
+#      Get the guild embed.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc getGuildEmbed { guildId } {
+    rest::GetGuildEmbed [set ${sessionNs}::token] $guildId $cmd
+}
+
+# discord::modifyGuildEmbed --
+#
+#      Modify the guild embed.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       data        Dictionary representing a guild embed JSON object. Each key
+#                   if one of enabled, channel_id. All keys are optional.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc modifyGuildEmbed { guildId data } {
+    rest::ModifyGuildEmbed [set ${sessionNs}::token] $guildId $data $cmd
 }
 
 # discord::createDM --
