@@ -17,7 +17,9 @@ namespace eval discord {
             modifyGuild getChannels createChannel changeChannelPositions \
             getMember getMembers addMember modifyMember kickMember getBans ban \
             unban getRoles createRole batchModifyRoles modifyRole deleteRole \
-            getPruneCount prune createDM sendDM
+            getPruneCount prune getVoiceRegions getGuildInvites \
+            getIntegrations createIntegration modifyIntegration \
+            deleteIntegration syncIntegration createDM sendDM
     namespace ensemble create
 }
 
@@ -672,6 +674,108 @@ discord::GenApiProc getPruneCount { guildId {days 1} } {
 discord::GenApiProc prune { guildId {days 1} } {
     rest::BeginGuildPrune [set ${sessionNs}::token] $guildId \
             [dict create days $days] $cmd
+}
+
+# discord::getVoiceRegions --
+#
+#      Get a list of voice regions for the guild.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc getVoiceRegions { guildId } {
+    rest::GetGuildVoiceRegions [set ${sessionNs}::token] $guildId $cmd
+}
+
+# discord::getGuildInvites --
+#
+#      Get a list of invites for the guild.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc getGuildInvites { guildId } {
+    rest::GetGuildInvites [set ${sessionNs}::token] $guildId $cmd
+}
+
+# discord::getIntegrations --
+#
+#      Get a list of integrations for the guild.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc getIntegrations { guildId } {
+    rest::GetGuildIntegrations [set ${sessionNs}::token] $guildId $cmd
+}
+
+# discord::createIntegration --
+#
+#      Attach an integration from the current user to the guild.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       data        Dictionary representing a JSON object. Each key is one of
+#                   type, id.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc createIntegration { guildId data } {
+    rest::CreateGuildIntegration [set ${sessionNs}::token] $guildId $data $cmd
+}
+
+# discord::modifyIntegration --
+#
+#      Modify the behaviour and settings of an integration for the guild.
+#
+# Arguments:
+#       sessionNs       Name of session namespace.
+#       guildId         Guild ID.
+#       integrationId   Integration ID.
+#       data            Dictionary representing a JSON object. Each key is one
+#                       of expire_behavior, expire_grace_period,
+#                       enable_emoticons.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc modifyIntegration { guildId integrationId data } {
+    rest::ModifyGuildIntegration [set ${sessionNs}::token] $guildId \
+            $integrationId $data $cmd
+}
+
+# discord::deleteIntegration --
+#
+#      Delete the attached integration for the guild.
+#
+# Arguments:
+#       sessionNs       Name of session namespace.
+#       guildId         Guild ID.
+#       integrationId   Integration ID.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc deleteIntegration { guildId integrationId } {
+    rest::DeleteGuildIntegration [set ${sessionNs}::token] $guildId \
+            $integrationId $cmd
+}
+
+# discord::syncIntegration --
+#
+#      Sync an integration for the guild.
+#
+# Arguments:
+#       sessionNs       Name of session namespace.
+#       guildId         Guild ID.
+#       integrationId   Integration ID.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc syncIntegration { guildId integrationId } {
+    rest::SyncGuildIntegration [set ${sessionNs}::token] $guildId \
+            $integrationId $cmd
 }
 
 # discord::createDM --
