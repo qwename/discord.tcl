@@ -657,7 +657,7 @@ proc discord::rest::GetGuildEmbed { token guildId {cmd {}} } {
 #       token   Bot token or OAuth2 bearer token.
 #       guildId Guild ID.
 #       data    Dictionary representing a JSON object. Each key is one of
-#               enabled, channel_id.
+#               enabled, channel_id. All keys are optional.
 #       cmd     (optional) callback procedure invoked after a response is
 #               received.
 #
@@ -666,5 +666,6 @@ proc discord::rest::GetGuildEmbed { token guildId {cmd {}} } {
 
 proc discord::rest::ModifyGuildEmbed { token guildId data {cmd {}} } {
     set body [DictToJson $data [dict get $::discord::JsonSpecs guild_embed]]
-    Send $token GET "/guilds/$guildId/embed" $body $cmd
+    Send $token PATCH "/guilds/$guildId/embed" $body $cmd \
+            -type "application/json"
 }
