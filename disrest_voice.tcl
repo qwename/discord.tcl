@@ -23,6 +23,6 @@
 # Results:
 #       Passes a list of voice region dictionaries to the callback.
 
-proc discord::rest::GetCurrentUser { token {cmd {}} } {
+proc discord::rest::ListVoiceRegions { token {cmd {}} } {
     Send $token GET "/voice/regions" {} $cmd
 }
