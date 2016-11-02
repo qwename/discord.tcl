@@ -19,7 +19,7 @@ namespace eval discord {
     namespace export connect disconnect setCallback
     namespace ensemble create
 
-    variable version 0.5.0
+    variable version 0.6.0
     variable UserAgent "DiscordBot (discord.tcl, $version)"
 
     ::http::config -useragent $UserAgent
