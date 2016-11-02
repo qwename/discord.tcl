@@ -20,7 +20,8 @@ namespace eval discord {
             getPruneCount prune getVoiceRegions getGuildInvites \
             getIntegrations createIntegration modifyIntegration \
             deleteIntegration syncIntegration getGuildEmbed modifyGuildEmbed \
-            getCurrentUser getUser modifyCurrentUser createDM sendDM
+            getCurrentUser getUser modifyCurrentUser getGuilds leaveGuild \
+            getDMs createDM sendDM
     namespace ensemble create
 }
 
@@ -825,10 +826,10 @@ discord::GenApiProc getCurrentUser { } {
 #
 # Arguments:
 #       sessionNs   Name of session namespace.
-#       userId      User ID.
+#       userId      (optional) user ID. Defaults to @me.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc getUser { userId } {
+discord::GenApiProc getUser { {userId @me} } {
     rest::GetUser [set ${sessionNs}::token] $userId $cmd
 }
 
@@ -844,6 +845,43 @@ discord::GenApiProc getUser { userId } {
 
 discord::GenApiProc modifyCurrentUser { data } {
     rest::ModifyCurrentUser [set ${sessionNs}::token] $data $cmd
+}
+
+# discord::getGuilds --
+#
+#       Get a list of user guilds the current user is a member of.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc getGuilds { } {
+    rest::GetCurrentUserGuilds [set ${sessionNs}::token] $cmd
+}
+
+# discord::leaveGuild --
+#
+#       Leave a guild.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc leaveGuild { guildId } {
+    rest::LeaveGuild [set ${sessionNs}::token] $guildId $cmd
+}
+
+# discord::getDMs --
+#
+#       Get a list of DM channels.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc getDMs { } {
+    rest::GetUserDMs [set ${sessionNs}::token] $cmd
 }
 
 # discord::createDM --
