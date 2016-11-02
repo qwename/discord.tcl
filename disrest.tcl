@@ -64,8 +64,7 @@ proc discord::rest::Send { token verb resource {body {}} {cmd {}} args } {
         return -code error "Unknown HTTP method: $verb"
     }
 
-    regexp {^(/(?:channels|guilds)/\d+)} $resource -> route
-    if {$route ne {}} {
+    if {[regexp {^(/(?:channels|guilds)/\d+)} $resource -> route]} {
         if {![dict exists $SendCount $token $route]} {
             dict set SendCount $token $route 0
         }
@@ -121,8 +120,10 @@ proc discord::rest::Send { token verb resource {body {}} {cmd {}} args } {
 
     variable HttpApiVersion
     set url "$::discord::ApiBaseUrl/v${HttpApiVersion}$resource"
-    dict set SendInfo $sendId [dict create cmd $cmd url $url token $token \
-            route $route]
+    dict set SendInfo $sendId [dict create cmd $cmd url $url token $token]
+    if {[info exists route]} {
+        dict set SendInfo $sendId route $route
+    }
     set command [list ::http::geturl $url \
             -headers [list Authorization "Bot $token" {*}$moreHeaders] \
             -method $verb \
@@ -131,7 +132,7 @@ proc discord::rest::Send { token verb resource {body {}} {cmd {}} args } {
         lappend command -query $body
     }
     lappend command -command $callbackName
-    ${log}::debug "Send: $route: $command"
+    ${log}::debug "Send: $command"
     {*}$command
     return
 }
@@ -153,7 +154,9 @@ proc discord::rest::SendCallback { sendId token } {
     variable SendInfo
     variable RateLimits
     interp alias {} ::discord::rest::SendCallback${sendId} {}
-    set route [dict get $SendInfo $sendId route]
+    if {[dict exists $SendInfo $sendId route]} {
+        set route [dict get $SendInfo $sendId route]
+    }
     set url [dict get $SendInfo $sendId url]
     set cmd [dict get $SendInfo $sendId cmd]
     set discordToken [dict get $SendInfo $sendId token]
@@ -164,7 +167,7 @@ proc discord::rest::SendCallback { sendId token } {
             array set meta [::http::meta $token]
             foreach header [list X-RateLimit-Limit X-RateLimit-Remaining \
                     X-RateLimit-Reset] {
-                if {[info exists meta($header)]} {
+                if {[info exists route] && [info exists meta($header)]} {
                     dict set RateLimits $discordToken $route \
                             $header $meta($header)
                 }
