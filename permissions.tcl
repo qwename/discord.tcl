@@ -12,6 +12,8 @@ namespace eval discord {
             getPermissionDescription
     namespace ensemble create
 
+    variable noPermissions 0x00000000
+    variable allPermissions 0
     variable PermissionInfo {
         CREATE_INSTANT_INVITE   0x00000001  {
             Allows creation of instant invites.
@@ -93,6 +95,7 @@ namespace eval discord {
     variable PermissionDescriptions [dict create]
     foreach {permission value description} $PermissionInfo {
         set value [expr {$value}]
+        set allPermissions [expr {$allPermissions | $value}]
         set description [string trim $description]
         dict set Permissions [expr {$value}] $permission
         dict set PermissionValues $permission $value
