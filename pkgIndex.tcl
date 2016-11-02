@@ -22,5 +22,6 @@ package ifneeded discord 0.6.0 "
     source [file join $dir discord_wrapper.tcl] ;
     source [file join $dir permissions.tcl] ;
     source [file join $dir snowflake.tcl] ;
+    source [file join $dir message_formatting.tcl] ;
     source [file join $dir discord.tcl] ;
 "
