@@ -20,7 +20,7 @@ namespace eval discord {
             getPruneCount prune getVoiceRegions getGuildInvites \
             getIntegrations createIntegration modifyIntegration \
             deleteIntegration syncIntegration getGuildEmbed modifyGuildEmbed \
-            createDM sendDM
+            getCurrentUser getUser modifyCurrentUser createDM sendDM
     namespace ensemble create
 }
 
@@ -805,6 +805,45 @@ discord::GenApiProc getGuildEmbed { guildId } {
 
 discord::GenApiProc modifyGuildEmbed { guildId data } {
     rest::ModifyGuildEmbed [set ${sessionNs}::token] $guildId $data $cmd
+}
+
+# discord::getCurrentUser --
+#
+#       Get the user of the requstor's account.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc getCurrentUser { } {
+    rest::GetCurrentUser [set ${sessionNs}::token] $cmd
+}
+
+# discord::getUser --
+#
+#       Get a user by ID.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       userId      User ID.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc getUser { userId } {
+    rest::GetUser [set ${sessionNs}::token] $userId $cmd
+}
+
+# discord::modifyCurrentUser --
+#
+#       Modify the requestor's user account settings.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       data        Dictionary representing a JSON object. Each key is one of
+#                   username, avator. All keys are optional.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc modifyCurrentUser { data } {
+    rest::ModifyCurrentUser [set ${sessionNs}::token] $data $cmd
 }
 
 # discord::createDM --
