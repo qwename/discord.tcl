@@ -8,7 +8,7 @@
 # file.
 
 namespace eval discord {
-    namespace export getPermissions setPermissions hasPermissions \
+    namespace export getPermList setPermissions hasPermissions \
             getPermissionDescription
     namespace ensemble create
 
@@ -103,7 +103,7 @@ namespace eval discord {
     }
 }
 
-# discord::getPermissions --
+# discord::getPermList --
 #
 #       Get a list of permissions for the permissions integer.
 #
@@ -114,7 +114,7 @@ namespace eval discord {
 #       Returns a list of permission tokens, or raises an error if the
 #       permissions integer is invalid.
 
-proc discord::getPermissions { permissions } {
+proc discord::getPermList { permissions } {
     if {![string is integer -strict $permissions]} {
         return -code error "Not an integer: $permissions"
     }
