@@ -9,19 +9,19 @@
 # file.
 
 namespace eval discord {
-    namespace export getChannel modifyChannel deleteChannel closeDM \
-            getMessages getMessage sendMessage uploadFile editMessage \
-            deleteMessage bulkDeleteMessages editChannelPermissions \
-            deleteChannelPermission getChannelInvites createChannelInvite \
-            triggerTyping getPinnedMessages pinMessage unpinMessage getGuild \
-            modifyGuild getChannels createChannel changeChannelPositions \
-            getMember getMembers addMember modifyMember kickMember getBans ban \
-            unban getRoles createRole batchModifyRoles modifyRole deleteRole \
+    namespace export getChannel modifyChannel deleteChannel getMessages \
+            getMessage sendMessage uploadFile editMessage deleteMessage \
+            bulkDeleteMessages editChannelPermissions deleteChannelPermission \
+            getChannelInvites createChannelInvite triggerTyping \
+            getPinnedMessages pinMessage unpinMessage getGuild modifyGuild \
+            getChannels createChannel changeChannelPositions getMember \
+            getMembers addMember modifyMember kickMember getBans ban unban \
+            getRoles createRole batchModifyRoles modifyRole deleteRole \
             getPruneCount prune getVoiceRegions getGuildInvites \
             getIntegrations createIntegration modifyIntegration \
             deleteIntegration syncIntegration getGuildEmbed modifyGuildEmbed \
             getCurrentUser getUser modifyCurrentUser getGuilds leaveGuild \
-            getDMs createDM sendDM
+            getDMs createDM sendDM closeDM
     namespace ensemble create
 }
 
@@ -119,30 +119,6 @@ discord::GenApiProc modifyChannel { channelId data } {
 #       getResult   See "Shared Arguments".
 
 discord::GenApiProc deleteChannel { channelId } {
-    rest::DeleteChannel [set ${sessionNs}::token] $channelId $cmd
-}
-
-# discord::closeDM --
-#
-#       Close a DM channel.
-#
-# Arguments:
-#       sessionNs   Name of session namespace.
-#       userId      User ID.
-#       getResult   See "Shared Arguments".
-
-discord::GenApiProc closeDM { userId } {
-    set channelId {}
-    dict for {id dmChan} [set ${sessionNs}::dmChannels] {
-        set recipients [dict get $dmChan recipients]
-        if {[llength $recipients] > 1} {
-            continue
-        }
-        if {[dict get [lindex $recipients 0] id] eq $userId} {
-            set channelId [dict get $dmChan id]
-            break
-        }
-    }
     rest::DeleteChannel [set ${sessionNs}::token] $channelId $cmd
 }
 
@@ -933,4 +909,28 @@ proc discord::sendDM { sessionNs userId content {getResult 0} } {
         ${log}::error "sendDM: DM channel not found for user: $userId"
         return -code error "DM channel not found for user: $userId"
     }
+}
+
+# discord::closeDM --
+#
+#       Close a DM channel.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       userId      User ID.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc closeDM { userId } {
+    set channelId {}
+    dict for {id dmChan} [set ${sessionNs}::dmChannels] {
+        set recipients [dict get $dmChan recipients]
+        if {[llength $recipients] > 1} {
+            continue
+        }
+        if {[dict get [lindex $recipients 0] id] eq $userId} {
+            set channelId [dict get $dmChan id]
+            break
+        }
+    }
+    rest::DeleteChannel [set ${sessionNs}::token] $channelId $cmd
 }
