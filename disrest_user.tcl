@@ -65,7 +65,7 @@ proc discord::rest::ModifyCurrentUser { token data {cmd {}} } {
             avatar      bare
         }
     set body [DictToJson $data $spec]
-    Send $token PATCH "/users/@me" $body $cmd
+    Send $token PATCH "/users/@me" $body $cmd -type "application/json"
 }
 
 # discord::rest::GetCurrentUserGuilds --
