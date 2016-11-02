@@ -114,7 +114,7 @@ namespace eval discord {
 #       Returns a list of permission tokens, or raises an error if the
 #       permissions integer is invalid.
 
-proc discord::GetPermissions { permissions } {
+proc discord::getPermissions { permissions } {
     if {![string is integer -strict $permissions]} {
         return -code error "Not an integer: $permissions"
     }
