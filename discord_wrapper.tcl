@@ -17,11 +17,11 @@ namespace eval discord {
             getChannels createChannel changeChannelPositions getMember \
             getMembers addMember modifyMember kickMember getBans ban unban \
             getRoles createRole batchModifyRoles modifyRole deleteRole \
-            getPruneCount prune getVoiceRegions getGuildInvites \
+            getPruneCount prune getGuildVoiceRegions getGuildInvites \
             getIntegrations createIntegration modifyIntegration \
             deleteIntegration syncIntegration getGuildEmbed modifyGuildEmbed \
             getCurrentUser getUser modifyCurrentUser getGuilds leaveGuild \
-            getDMs createDM sendDM closeDM
+            getDMs createDM getConnections getVoiceRegions sendDM closeDM
     namespace ensemble create
 }
 
@@ -654,7 +654,7 @@ discord::GenApiProc prune { guildId {days 1} } {
             [dict create days $days] $cmd
 }
 
-# discord::getVoiceRegions --
+# discord::getGuildVoiceRegions --
 #
 #      Get a list of voice regions for the guild.
 #
@@ -663,7 +663,7 @@ discord::GenApiProc prune { guildId {days 1} } {
 #       guildId     Guild ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc getVoiceRegions { guildId } {
+discord::GenApiProc getGuildVoiceRegions { guildId } {
     rest::GetGuildVoiceRegions [set ${sessionNs}::token] $guildId $cmd
 }
 
@@ -872,6 +872,30 @@ discord::GenApiProc getDMs { } {
 discord::GenApiProc createDM { userId } {
     rest::CreateDM [set ${sessionNs}::token] \
             [dict create recipient_id $userId] $cmd
+}
+
+# discord::getConnections --
+#
+#       Get a list of connections.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc getConnections { } {
+    rest::GetUsersConnections [set ${sessionNs}::token] $cmd
+}
+
+# discord::getVoiceRegions --
+#
+#      Get a list of voice regions that can be used when creating servers.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc getVoiceRegions { } {
+    rest::ListVoiceRegions [set ${sessionNs}::token] $cmd
 }
 
 # discord::sendDM --
