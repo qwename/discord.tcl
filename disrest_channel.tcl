@@ -135,7 +135,8 @@ proc discord::rest::CreateMessage { token channelId data {cmd {}} } {
             tts     bare
         }
     set body [DictToJson $data $spec]
-    Send $token POST "/channels/$channelId/messages" $body $cmd
+    set query [::http::formatQuery {*}$data]
+    Send $token POST "/channels/$channelId/messages" $query $cmd
 }
 
 # discord::rest::UploadFile --
