@@ -6,7 +6,7 @@ Supports Discord Gateway API version 6.
 ### Status
 
 - Gateway API
-  - All events except Request Guild Members.
+  - All events except Request Guild Members, Message Reaction Add/Remove.
 - HTTP API
   - All Channel related requests.
   - All Guild related requests.
