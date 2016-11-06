@@ -196,7 +196,7 @@ proc discord::callback::event::GuildBan { sessionNs event data } {
         GUILD_BAN_ADD -
         GUILD_BAN_REMOVE {
             set guildName [dict get [set ${sessionNs}::guilds] $guildId name]
-            foreach field {username discriminator} {
+            foreach field {id username discriminator} {
                 set $field [dict get $user $field]
             }
             ${log}::debug [join [list "$event '$guildName' ($guildId):" \
