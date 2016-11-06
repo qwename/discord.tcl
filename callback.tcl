@@ -11,15 +11,15 @@ package require Tcl 8.6
 
 namespace eval discord::callback::event { }
 
+# Shared Arguments:
+#       sessionNs   Name of session namespace.
+#       event       Event name.
+#       data        Dictionary representing a JSON object
+
 # discord::callback::event::Ready --
 #
 #       Callback procedure for Dispatch Ready event. Get our user object, list
 #       of DM channels, guilds, and session_id.
-#
-# Arguments:
-#       sessionNs   Name of session namespace.
-#       event       Event name.
-#       data        Dictionary representing a JSON object
 #
 # Results:
 #       Updates variables in session namespace.
@@ -42,11 +42,6 @@ proc discord::callback::event::Ready { sessionNs event data } {
 # discord::callback::event::Channel --
 #
 #       Callback procedure for Dispatch Channel events Create, Update, Delete.
-#
-# Arguments:
-#       sessionNs   Name of session namespace.
-#       event       Event name.
-#       data        Dictionary representing a JSON object
 #
 # Results:
 #       Modify session channel information.
@@ -129,11 +124,6 @@ proc discord::callback::event::Channel { sessionNs event data } {
 #
 #       Callback procedure for Dispatch Guild events Create, Update, Delete.
 #
-# Arguments:
-#       sessionNs   Name of session namespace.
-#       event       Event name.
-#       data        Dictionary representing a JSON object
-#
 # Results:
 #       Modify session guild information.
 
@@ -176,11 +166,6 @@ proc discord::callback::event::Guild { sessionNs event data } {
 #
 #       Callback procedure for Dispatch Guild Ban events Add, Remove.
 #
-# Arguments:
-#       sessionNs   Name of session namespace.
-#       event       Event name.
-#       data        Dictionary representing a JSON object
-#
 # Results:
 #       None.
 
@@ -210,11 +195,6 @@ proc discord::callback::event::GuildBan { sessionNs event data } {
 #
 #       Callback procedure for Dispatch event Guild Emojis Update.
 #
-# Arguments:
-#       sessionNs   Name of session namespace.
-#       event       Event name.
-#       data        Dictionary representing a JSON object
-#
 # Results:
 #       Modify session guild information.
 
@@ -230,11 +210,6 @@ proc discord::callback::event::GuildEmojisUpdate { sessionNs event data } {
 #
 #       Callback procedure for Dispatch event Guild Emojis Update.
 #
-# Arguments:
-#       sessionNs   Name of session namespace.
-#       event       Event name.
-#       data        Dictionary representing a JSON object
-#
 # Results:
 #       Modify session guild information.
 
@@ -249,11 +224,6 @@ proc discord::callback::event::GuildIntegrationsUpdate { sessionNs event data
 # discord::callback::event::GuildMember --
 #
 #       Callback procedure for Dispatch Guild Member events Add, Remove, Update.
-#
-# Arguments:
-#       sessionNs   Name of session namespace.
-#       event       Event name.
-#       data        Dictionary representing a JSON object
 #
 # Results:
 #       Modify session guild information.
@@ -306,11 +276,6 @@ proc discord::callback::event::GuildMember { sessionNs event data } {
 #
 #       Callback procedure for Dispatch event Guild Members Chunk.
 #
-# Arguments:
-#       sessionNs   Name of session namespace.
-#       event       Event name.
-#       data        Dictionary representing a JSON object
-#
 # Results:
 #       Modify session guild information.
 
@@ -329,11 +294,6 @@ proc discord::callback::event::GuildMembersChunk { sessionNs event data } {
 #
 #       Callback procedure for Dispatch Guild Role events Create, Update,
 #       Delete.
-#
-# Arguments:
-#       sessionNs   Name of session namespace.
-#       event       Event name.
-#       data        Dictionary representing a JSON object
 #
 # Results:
 #       Modify session guild information.
@@ -388,11 +348,6 @@ proc discord::callback::event::GuildRole { sessionNs event data } {
 #
 #       Callback procedure for Dispatch Message events Create, Update, Delete.
 #
-# Arguments:
-#       sessionNs   Name of session namespace.
-#       event       Event name.
-#       data        Dictionary representing a JSON object
-#
 # Results:
 #       Log message information.
 
@@ -421,11 +376,6 @@ proc discord::callback::event::Message { sessionNs event data } {
 #
 #       Callback procedure for Dispatch event Message Delete Bulk.
 #
-# Arguments:
-#       sessionNs   Name of session namespace.
-#       event       Event name.
-#       data        Dictionary representing a JSON object
-#
 # Results:
 #       Log information.
 
@@ -439,12 +389,7 @@ proc discord::callback::event::MessageDeleteBulk { sessionNs event data } {
 
 # discord::callback::event::PresenceUpdate --
 #
-#       Callback procedure for Dispatch event Presence Update
-#
-# Arguments:
-#       sessionNs   Name of session namespace.
-#       event       Event name.
-#       data        Dictionary representing a JSON object.
+#       Callback procedure for Dispatch event Presence Update.
 #
 # Results:
 #       Modify session user and guild information.
@@ -487,12 +432,7 @@ proc discord::callback::event::PresenceUpdate { sessionNs event data } {
 
 # discord::callback::event::UserUpdate --
 #
-#       Callback procedure for Dispatch event User Update
-#
-# Arguments:
-#       sessionNs   Name of session namespace.
-#       event       Event name.
-#       data        Dictionary representing a JSON object.
+#       Callback procedure for Dispatch event User Update.
 #
 # Results:
 #       Modify session user information.
