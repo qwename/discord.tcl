@@ -55,6 +55,7 @@ namespace eval discord {
         MESSAGE_DELETE              {}
         MESSAGE_DELETE_BULK         {}
         PRESENCE_UPDATE             {}
+        TYPING_START                {}
         USER_UPDATE                 {}
     }
     set EventToProc {
