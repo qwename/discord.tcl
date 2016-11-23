@@ -61,8 +61,12 @@ discord::gateway disconnect $sock
 
 Example output
 ```
-[Sun Oct 09 14:43:01 EDT 2016] [discord::gateway] [notice] 'Connecting to the Gateway: wss://gateway.discord.gg/?v=6&encoding=json'
-2016-10-09T18:43:36.651000+00:00 qwename#5406: hi there
+[Wed Nov 23 18:39:19 EST 2016] [discord::gateway] [notice] 'GetGateway: No cached Gateway API URL for https://discordapp.com/api'
+[Wed Nov 23 18:39:19 EST 2016] [discord::gateway] [info] 'GetGateway: Retrieving Gateway API URL from https://discordapp.com/api/v6/gateway'
+[Wed Nov 23 18:39:19 EST 2016] [discord::gateway] [info] 'GetGateway: Cached Gateway API URL for https://discordapp.com/api: wss://gateway.discord.gg'
+[Wed Nov 23 18:39:19 EST 2016] [discord::gateway] [notice] 'connect: wss://gateway.discord.gg/?v=6&encoding=json'
+[Wed Nov 23 18:39:19 EST 2016] [discord::gateway] [notice] 'Handler: Connected.'
+2016-11-23T23:39:25.953000+00:00 [redacted]#0000: Don't ever reduce achievements. Add more!!
 ```
 
 ### Testing
